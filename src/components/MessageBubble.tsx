@@ -1,14 +1,19 @@
 
 import React, { useEffect, useRef } from 'react';
-import { Message } from '@/utils/types';
+import { Message, InputMode } from '@/utils/types';
 import { cn } from "@/lib/utils";
 
 interface MessageBubbleProps {
   message: Message;
   isLatest: boolean;
+  inputMode?: InputMode;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ 
+  message, 
+  isLatest,
+  inputMode = InputMode.TEXT
+}) => {
   const bubbleRef = useRef<HTMLDivElement>(null);
   const isUser = message.role === 'user';
   
@@ -30,7 +35,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
       )}
     >
       {message.content}
-      {isLatest && !isUser && (
+      {isLatest && !isUser && inputMode === InputMode.VOICE && (
         <div className="text-xs text-gray-500 mt-2 italic">
           (Remi is speaking this message)
         </div>

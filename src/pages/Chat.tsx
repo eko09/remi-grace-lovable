@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -20,22 +19,15 @@ const Chat: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Get participant ID from session storage
   useEffect(() => {
     const storedId = sessionStorage.getItem('participantId');
     if (!storedId) {
       navigate('/');
-      toast({
-        title: "Session Error",
-        description: "Please enter your participant ID to begin.",
-        variant: "destructive"
-      });
     } else {
       setParticipantId(storedId);
     }
   }, [navigate, toast]);
   
-  // Initialize chat with welcome message
   const initialMessage: Message = {
     id: '0',
     content: `Hello! I'm Remi, your reminiscence therapy companion. I'm here to help you explore your memories and experiences. How are you feeling today?`,
@@ -45,23 +37,20 @@ const Chat: React.FC = () => {
   
   const { messages, isLoading, sendMessage } = useChatCompletion([initialMessage]);
   
-  // Focus input on mode change
   useEffect(() => {
     if (inputMode === InputMode.TEXT && inputRef.current) {
       inputRef.current.focus();
     }
   }, [inputMode]);
   
-  // Handle text form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (messageInput.trim() && !isLoading) {
-      await sendMessage(messageInput);
+      await sendMessage(messageInput, InputMode.TEXT);
       setMessageInput('');
     }
   };
   
-  // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -69,21 +58,18 @@ const Chat: React.FC = () => {
     }
   };
   
-  // Switch input modes
   const toggleInputMode = () => {
     setInputMode(prevMode => 
       prevMode === InputMode.TEXT ? InputMode.VOICE : InputMode.TEXT
     );
   };
   
-  // Handle speech input
   const handleSpeechInput = async (transcription: string) => {
     if (transcription.trim()) {
-      await sendMessage(transcription);
+      await sendMessage(transcription, InputMode.VOICE);
     }
   };
   
-  // Exit session and return to landing page
   const exitSession = () => {
     navigate('/');
   };
@@ -130,6 +116,7 @@ const Chat: React.FC = () => {
                   key={message.id} 
                   message={message} 
                   isLatest={index === messages.length - 1}
+                  inputMode={inputMode}
                 />
               ))}
               

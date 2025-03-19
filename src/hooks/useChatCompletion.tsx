@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { Message } from '../utils/types';
+import { Message, InputMode } from '../utils/types';
 import { getChatCompletion, textToSpeech } from '../utils/api';
 import { useToast } from "@/components/ui/use-toast";
 
@@ -11,7 +11,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
   const { toast } = useToast();
 
   // Send a message and get a response
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, inputMode: InputMode = InputMode.TEXT) => {
     if (!content.trim()) return;
     
     setError(null);
@@ -42,16 +42,18 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Always convert response to speech, regardless of input mode
-      try {
-        await textToSpeech(responseContent);
-      } catch (speechError) {
-        console.error('Text-to-speech error:', speechError);
-        toast({
-          title: "Speech Synthesis Error",
-          description: "Unable to play audio response. Check your audio settings.",
-          variant: "destructive"
-        });
+      // Only convert response to speech if input was voice
+      if (inputMode === InputMode.VOICE) {
+        try {
+          await textToSpeech(responseContent);
+        } catch (speechError) {
+          console.error('Text-to-speech error:', speechError);
+          toast({
+            title: "Speech Synthesis Error",
+            description: "Unable to play audio response. Check your audio settings.",
+            variant: "destructive"
+          });
+        }
       }
       
       return assistantMessage;
