@@ -30,6 +30,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
       )}
     >
       {message.content}
+      {isLatest && !isUser && (
+        <div className="text-xs text-gray-500 mt-2 italic">
+          (Remi is speaking this message)
+        </div>
+      )}
     </div>
   );
 };

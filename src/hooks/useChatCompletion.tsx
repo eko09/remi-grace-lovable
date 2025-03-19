@@ -42,7 +42,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Convert response to speech
+      // Always convert response to speech, regardless of input mode
       try {
         await textToSpeech(responseContent);
       } catch (speechError) {
