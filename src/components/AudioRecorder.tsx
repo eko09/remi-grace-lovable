@@ -11,34 +11,52 @@ interface AudioRecorderProps {
 
 const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssistantResponding }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [transcription, setTranscription] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
 
-  // Request microphone access on component mount
+  // Initialize speech recognition on component mount
   useEffect(() => {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join(' ');
+        
+        setTranscription(transcript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        toast({
+          title: "Speech Recognition Error",
+          description: `Error: ${event.error}. Please try again.`,
+          variant: "destructive"
+        });
+        stopRecording();
+      };
+    } else {
+      toast({
+        title: "Speech Recognition Not Supported",
+        description: "Your browser doesn't support speech recognition. Please try a different browser.",
+        variant: "destructive"
+      });
+    }
+
+    // Request microphone access
     const requestMicrophoneAccess = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorderRef.current = new MediaRecorder(stream);
-        
-        mediaRecorderRef.current.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
-        
-        mediaRecorderRef.current.onstop = () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-          setAudioBlob(audioBlob);
-          audioChunksRef.current = [];
-          
-          // Mock transcription - in a real app, you'd send this to a speech-to-text API
-          mockTranscription(audioBlob);
-        };
       } catch (error) {
         console.error('Error accessing microphone:', error);
         toast({
@@ -53,51 +71,46 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
     
     // Cleanup function
     return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
       }
+      stopRecording();
     };
   }, [toast]);
 
   // Start recording
   const startRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'recording') {
+    if (recognitionRef.current) {
       setTranscription('');
-      setAudioBlob(null);
       setIsRecording(true);
-      audioChunksRef.current = [];
-      mediaRecorderRef.current.start();
+      recognitionRef.current.start();
     }
   };
 
   // Stop recording
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+    if (recognitionRef.current && isRecording) {
+      recognitionRef.current.stop();
       setIsRecording(false);
-      mediaRecorderRef.current.stop();
+      setIsTranscribing(true);
+      
+      // Short delay to ensure final transcription is captured
+      setTimeout(() => {
+        setIsTranscribing(false);
+      }, 500);
     }
-  };
-
-  // Mock transcription - in a real app, you'd use a real speech-to-text API
-  const mockTranscription = (audioBlob: Blob) => {
-    setIsTranscribing(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      // This is where you would normally call a speech-to-text API
-      // For demo purposes, we'll use a placeholder message
-      const mockText = "This is where your spoken message would appear. In a real app, your voice would be converted to text.";
-      setTranscription(mockText);
-      setIsTranscribing(false);
-    }, 1000);
   };
 
   // Send the transcribed text
   const sendTranscription = () => {
-    if (transcription) {
-      onAudioComplete(transcription);
+    if (transcription && transcription.trim()) {
+      onAudioComplete(transcription.trim());
       setTranscription('');
-      setAudioBlob(null);
+    } else {
+      toast({
+        title: "No Speech Detected",
+        description: "Please speak clearly and try again.",
+      });
     }
   };
 
@@ -111,6 +124,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
               onClick={sendTranscription}
               className="btn-transition"
               size="sm"
+              disabled={isAssistantResponding}
             >
               <Send className="h-4 w-4 mr-1" /> Send
             </Button>
@@ -142,7 +156,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
       
       {isTranscribing && (
         <p className="text-sm text-therapy-text mt-2 animate-pulse">
-          Transcribing your message...
+          Processing your message...
         </p>
       )}
     </div>

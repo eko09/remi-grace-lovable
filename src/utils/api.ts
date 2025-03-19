@@ -53,41 +53,51 @@ export async function getChatCompletion(messages: Message[]): Promise<string> {
   }
 }
 
-// Function to convert text to speech
-export async function textToSpeech(text: string): Promise<ArrayBuffer> {
-  try {
-    // Use browser's built-in SpeechSynthesis API for simplicity
-    // This is a placeholder - a real API would be better for production
-    return new Promise((resolve, reject) => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9; // Slightly slower for older adults
-      utterance.pitch = 1;
-      utterance.volume = 1;
-      
-      // Use a more natural voice if available
-      const voices = speechSynthesis.getVoices();
-      const preferredVoice = voices.find(voice => 
-        voice.name.includes('Female') || voice.name.includes('Google')
-      );
-      
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
-      
-      // Mock returning an ArrayBuffer since we're using the browser's API
-      // In a real app, you'd return the actual audio buffer from a TTS API
-      utterance.onend = () => {
-        resolve(new ArrayBuffer(0));
-      };
-      
-      utterance.onerror = (event) => {
-        reject(new Error('Speech synthesis failed'));
-      };
-      
-      speechSynthesis.speak(utterance);
-    });
-  } catch (error) {
-    console.error('Text-to-speech error:', error);
-    throw error;
-  }
+// Function to properly convert text to speech using browser's SpeechSynthesis
+export async function textToSpeech(text: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
+    
+    // Create a new utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9; // Slightly slower for older adults
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    // Use a more natural voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(voice => 
+      voice.name.includes('Female') || 
+      voice.name.includes('Google') || 
+      voice.name.includes('Samantha')
+    );
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    // Set up event handlers
+    utterance.onend = () => {
+      resolve();
+    };
+    
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      reject(new Error('Speech synthesis failed'));
+    };
+    
+    // Speak the text
+    speechSynthesis.speak(utterance);
+  });
+}
+
+// Initialize voices as soon as possible
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+  
+  // Try to load voices immediately as well
+  window.speechSynthesis.getVoices();
 }
