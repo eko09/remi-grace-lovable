@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Send, Mic, Keyboard, ArrowLeft, X, Pause } from 'lucide-react';
+import { Send, Mic, Keyboard, ArrowLeft, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import MessageBubble from '@/components/MessageBubble';
 import AudioRecorder from '@/components/AudioRecorder';
@@ -15,7 +15,6 @@ const Chat: React.FC = () => {
   const [inputMode, setInputMode] = useState<InputMode>(InputMode.TEXT);
   const [messageInput, setMessageInput] = useState('');
   const [participantId, setParticipantId] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -47,7 +46,7 @@ const Chat: React.FC = () => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (messageInput.trim() && !isLoading && !isPaused) {
+    if (messageInput.trim() && !isLoading) {
       await sendMessage(messageInput, InputMode.TEXT);
       setMessageInput('');
     }
@@ -67,7 +66,7 @@ const Chat: React.FC = () => {
   };
   
   const handleSpeechInput = async (transcription: string) => {
-    if (transcription.trim() && !isPaused) {
+    if (transcription.trim()) {
       await sendMessage(transcription, InputMode.VOICE);
     }
   };
@@ -82,14 +81,6 @@ const Chat: React.FC = () => {
       description: "Your therapy session has been completed.",
     });
     navigate('/');
-  };
-
-  const togglePause = () => {
-    setIsPaused(prev => !prev);
-    toast({
-      title: isPaused ? "Conversation Resumed" : "Conversation Paused",
-      description: isPaused ? "You can continue your therapy session." : "Your therapy session is temporarily paused.",
-    });
   };
 
   return (
@@ -112,15 +103,6 @@ const Chat: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={togglePause}
-            className={isPaused ? "bg-amber-100" : ""}
-          >
-            <Pause className="h-4 w-4 mr-2" />
-            {isPaused ? "Resume" : "Pause"}
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -176,17 +158,17 @@ const Chat: React.FC = () => {
                 <Input
                   ref={inputRef}
                   type="text"
-                  placeholder={isPaused ? "Conversation is paused..." : "Type your message here..."}
+                  placeholder="Type your message here..."
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="flex-1 input-focus-ring h-12 text-base"
-                  disabled={isLoading || isPaused}
+                  disabled={isLoading}
                 />
                 <Button 
                   type="submit" 
                   size="icon" 
-                  disabled={!messageInput.trim() || isLoading || isPaused}
+                  disabled={!messageInput.trim() || isLoading}
                   className="h-12 w-12 btn-transition rounded-full"
                 >
                   <Send className="h-5 w-5" />
@@ -196,7 +178,6 @@ const Chat: React.FC = () => {
                   variant="outline" 
                   size="icon" 
                   onClick={toggleInputMode}
-                  disabled={isPaused}
                   className="h-12 w-12 btn-transition rounded-full"
                 >
                   <Mic className="h-5 w-5" />
@@ -204,19 +185,14 @@ const Chat: React.FC = () => {
               </form>
             ) : (
               <div className="flex flex-col w-full items-center">
-                {isPaused ? (
-                  <p className="text-amber-600 mb-4">Conversation is paused. Resume to continue.</p>
-                ) : (
-                  <AudioRecorder 
-                    onAudioComplete={handleSpeechInput} 
-                    isAssistantResponding={isLoading} 
-                  />
-                )}
+                <AudioRecorder 
+                  onAudioComplete={handleSpeechInput} 
+                  isAssistantResponding={isLoading} 
+                />
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={toggleInputMode}
-                  disabled={isPaused}
                   className="mt-4 btn-transition"
                 >
                   <Keyboard className="h-4 w-4 mr-2" /> Switch to Text

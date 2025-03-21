@@ -13,8 +13,6 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
 
@@ -44,6 +42,10 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
         });
         stopRecording();
       };
+      
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
     } else {
       toast({
         title: "Speech Recognition Not Supported",
@@ -52,23 +54,6 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
       });
     }
 
-    // Request microphone access
-    const requestMicrophoneAccess = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorderRef.current = new MediaRecorder(stream);
-      } catch (error) {
-        console.error('Error accessing microphone:', error);
-        toast({
-          title: "Microphone Access Error",
-          description: "Unable to access your microphone. Please check your browser permissions.",
-          variant: "destructive"
-        });
-      }
-    };
-    
-    requestMicrophoneAccess();
-    
     // Cleanup function
     return () => {
       if (recognitionRef.current) {
@@ -106,6 +91,11 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
     if (transcription && transcription.trim()) {
       onAudioComplete(transcription.trim());
       setTranscription('');
+      setIsRecording(false);
+      
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     } else {
       toast({
         title: "No Speech Detected",
@@ -150,7 +140,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
       
       {isRecording && (
         <p className="text-sm text-therapy-text mt-2">
-          Release to stop recording...
+          Speak now...
         </p>
       )}
       

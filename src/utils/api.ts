@@ -56,8 +56,14 @@ export async function getChatCompletion(messages: Message[]): Promise<string> {
 // Function to properly convert text to speech using browser's SpeechSynthesis
 export async function textToSpeech(text: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (!('speechSynthesis' in window)) {
+      console.error('Speech synthesis not supported');
+      reject(new Error('Speech synthesis not supported'));
+      return;
+    }
+    
     // Cancel any ongoing speech
-    speechSynthesis.cancel();
+    window.speechSynthesis.cancel();
     
     // Create a new utterance
     const utterance = new SpeechSynthesisUtterance(text);
@@ -65,16 +71,30 @@ export async function textToSpeech(text: string): Promise<void> {
     utterance.pitch = 1;
     utterance.volume = 1;
     
-    // Use a more natural voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(voice => 
-      voice.name.includes('Female') || 
-      voice.name.includes('Google') || 
-      voice.name.includes('Samantha')
-    );
+    // Try to get voices
+    let voices = window.speechSynthesis.getVoices();
     
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+    // If no voices available, wait for them to load
+    if (voices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        voices = window.speechSynthesis.getVoices();
+        setVoice();
+      };
+    } else {
+      setVoice();
+    }
+    
+    function setVoice() {
+      // Use a more natural voice if available
+      const preferredVoice = voices.find(voice => 
+        voice.name.includes('Female') || 
+        voice.name.includes('Google') || 
+        voice.name.includes('Samantha')
+      );
+      
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
     }
     
     // Set up event handlers
@@ -88,16 +108,18 @@ export async function textToSpeech(text: string): Promise<void> {
     };
     
     // Speak the text
-    speechSynthesis.speak(utterance);
+    window.speechSynthesis.speak(utterance);
   });
 }
 
 // Initialize voices as soon as possible
 if ('speechSynthesis' in window) {
-  speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-  };
-  
-  // Try to load voices immediately as well
+  // Force voices to load
   window.speechSynthesis.getVoices();
+  
+  // Set up the onvoiceschanged event to refresh voices when they're available
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+    console.log('Voices loaded:', window.speechSynthesis.getVoices().length);
+  };
 }

@@ -42,8 +42,9 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Only convert response to speech if input was voice
+      // Convert response to speech for voice input mode
       if (inputMode === InputMode.VOICE) {
+        console.log('Converting to speech:', responseContent);
         try {
           await textToSpeech(responseContent);
         } catch (speechError) {
