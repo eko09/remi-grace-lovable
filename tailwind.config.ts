@@ -64,9 +64,9 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				therapy: {
-					blue: '#C6E2FF', // Light blue
-                    'blue-light': '#D9EDFF', // Even lighter blue
-                    'blue-dark': '#A2CFFF', // Slightly darker blue
+					blue: '#1EAEDB', // Updated to a more consistent blue
+                    'blue-light': '#33C3F0', // Updated light blue
+                    'blue-dark': '#0FA0CE', // Updated dark blue
                     beige: '#F5F1E8', // Soft beige
                     'beige-light': '#FAF7F0', // Lighter beige
                     'beige-dark': '#E6DFD1', // Slightly darker beige

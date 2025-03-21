@@ -56,7 +56,7 @@ const ParticipantForm: React.FC = () => {
           </div>
           <CardTitle className="text-3xl font-medium text-center text-therapy-text font-playfair">Welcome to Remi</CardTitle>
           <CardDescription className="text-center text-base text-gray-600">
-            Your personal reminiscence therapy companion
+            Your reminiscence therapy companion
           </CardDescription>
         </CardHeader>
         
