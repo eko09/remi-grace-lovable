@@ -53,7 +53,7 @@ export async function getChatCompletion(messages: Message[]): Promise<string> {
   }
 }
 
-// Function to properly convert text to speech using browser's SpeechSynthesis
+// Improved text-to-speech function with better voice handling and error management
 export async function textToSpeech(text: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!('speechSynthesis' in window)) {
@@ -65,40 +65,56 @@ export async function textToSpeech(text: string): Promise<void> {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
     
-    // Create a new utterance
+    // Create utterance with improved settings
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9; // Slightly slower for older adults
+    utterance.rate = 0.9; // Slightly slower rate for clarity
     utterance.pitch = 1;
     utterance.volume = 1;
     
-    // Try to get voices
-    let voices = window.speechSynthesis.getVoices();
-    
-    // If no voices available, wait for them to load
-    if (voices.length === 0) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        voices = window.speechSynthesis.getVoices();
-        setVoice();
-      };
-    } else {
-      setVoice();
+    // Split text into smaller chunks if it's too long
+    // This helps prevent the speech synthesis from cutting off
+    const maxLength = 150;
+    if (text.length > maxLength) {
+      const chunks = splitTextIntoChunks(text, maxLength);
+      speakInChunks(chunks, 0, resolve, reject);
+      return;
     }
     
-    function setVoice() {
-      // Use a more natural voice if available
+    // Get available voices
+    let voices = speechSynthesis.getVoices();
+    
+    // If no voices available yet, wait for them to load
+    if (voices.length === 0) {
+      speechSynthesis.onvoiceschanged = () => {
+        voices = speechSynthesis.getVoices();
+        setPreferredVoice();
+      };
+    } else {
+      setPreferredVoice();
+    }
+    
+    function setPreferredVoice() {
+      // Try to find a female voice for Remi
       const preferredVoice = voices.find(voice => 
         voice.name.includes('Female') || 
-        voice.name.includes('Google') || 
-        voice.name.includes('Samantha')
+        voice.name.includes('Samantha') ||
+        voice.name.includes('Victoria') ||
+        (voice.name.includes('Google') && voice.name.includes('female'))
       );
       
       if (preferredVoice) {
+        console.log('Using voice:', preferredVoice.name);
         utterance.voice = preferredVoice;
+      } else if (voices.length > 0) {
+        // Fallback to first available voice
+        utterance.voice = voices[0];
+        console.log('Falling back to voice:', voices[0].name);
       }
     }
     
     // Set up event handlers
     utterance.onend = () => {
+      console.log('Speech synthesis finished successfully');
       resolve();
     };
     
@@ -108,18 +124,132 @@ export async function textToSpeech(text: string): Promise<void> {
     };
     
     // Speak the text
-    window.speechSynthesis.speak(utterance);
+    try {
+      console.log('Starting speech synthesis...');
+      speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.error('Error starting speech synthesis:', err);
+      reject(err);
+    }
   });
+}
+
+// Helper function to split text into smaller chunks at sentence boundaries
+function splitTextIntoChunks(text: string, maxLength: number): string[] {
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const chunks: string[] = [];
+  let currentChunk = '';
+  
+  for (const sentence of sentences) {
+    if (currentChunk.length + sentence.length <= maxLength) {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
+    } else {
+      if (currentChunk) {
+        chunks.push(currentChunk);
+      }
+      currentChunk = sentence;
+    }
+  }
+  
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+  
+  return chunks;
+}
+
+// Helper function to speak text in chunks sequentially
+function speakInChunks(chunks: string[], index: number, resolve: () => void, reject: (error: Error) => void) {
+  if (index >= chunks.length) {
+    resolve();
+    return;
+  }
+  
+  const utterance = new SpeechSynthesisUtterance(chunks[index]);
+  utterance.rate = 0.9;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  
+  // Set available voice if possible
+  const voices = speechSynthesis.getVoices();
+  const preferredVoice = voices.find(voice => 
+    voice.name.includes('Female') || 
+    voice.name.includes('Samantha') ||
+    voice.name.includes('Victoria')
+  );
+  
+  if (preferredVoice) {
+    utterance.voice = preferredVoice;
+  }
+  
+  utterance.onend = () => {
+    speakInChunks(chunks, index + 1, resolve, reject);
+  };
+  
+  utterance.onerror = (event) => {
+    console.error('Speech synthesis error in chunk:', event);
+    reject(new Error('Speech synthesis failed'));
+  };
+  
+  speechSynthesis.speak(utterance);
 }
 
 // Initialize voices as soon as possible
 if ('speechSynthesis' in window) {
   // Force voices to load
-  window.speechSynthesis.getVoices();
+  speechSynthesis.getVoices();
   
-  // Set up the onvoiceschanged event to refresh voices when they're available
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-    console.log('Voices loaded:', window.speechSynthesis.getVoices().length);
+  // Set up the onvoiceschanged event
+  speechSynthesis.onvoiceschanged = () => {
+    const voices = speechSynthesis.getVoices();
+    console.log('Voices loaded:', voices.length);
+    // Log available voices for debugging
+    voices.forEach((voice, index) => {
+      console.log(`Voice ${index}: ${voice.name} (${voice.lang})`);
+    });
   };
+}
+
+// Function to generate a session summary from messages
+export function generateSessionSummary(messages: Message[]): string {
+  // Filter out system messages and the initial greeting
+  const conversationMessages = messages.filter(msg => 
+    msg.role === 'user' || (msg.role === 'assistant' && msg.id !== '0')
+  );
+  
+  if (conversationMessages.length === 0) {
+    return "No conversation took place in this session.";
+  }
+  
+  // Count messages
+  const userMessageCount = conversationMessages.filter(msg => msg.role === 'user').length;
+  const assistantMessageCount = conversationMessages.filter(msg => msg.role === 'assistant').length;
+  
+  // Calculate session duration
+  const firstMessageTime = conversationMessages[0]?.timestamp || new Date();
+  const lastMessageTime = conversationMessages[conversationMessages.length - 1]?.timestamp || new Date();
+  const sessionDurationMs = lastMessageTime.getTime() - firstMessageTime.getTime();
+  const sessionDurationMinutes = Math.round(sessionDurationMs / (1000 * 60));
+  
+  return `
+    <div class="space-y-4">
+      <h3 class="text-lg font-medium">Session Summary</h3>
+      
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <div>Total Messages:</div>
+        <div>${conversationMessages.length}</div>
+        
+        <div>Your Messages:</div>
+        <div>${userMessageCount}</div>
+        
+        <div>Remi's Responses:</div>
+        <div>${assistantMessageCount}</div>
+        
+        <div>Session Duration:</div>
+        <div>${sessionDurationMinutes} minutes</div>
+      </div>
+      
+      <p class="text-sm pt-2">Thank you for participating in this reminiscence therapy session with Remi.</p>
+    </div>
+  `;
 }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const ParticipantForm: React.FC = () => {
   const [participantId, setParticipantId] = useState('');
@@ -46,7 +47,13 @@ const ParticipantForm: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-therapy-light page-transition">
       <Card className="w-full max-w-md glass-panel animate-slideUp">
-        <CardHeader className="space-y-1">
+        <CardHeader className="space-y-4">
+          <div className="flex justify-center mb-2">
+            <Avatar className="h-32 w-32">
+              <AvatarImage src="/lovable-uploads/2bc5914a-ea60-45b1-9efe-858d1d316cfe.png" alt="Remi" />
+              <AvatarFallback>RM</AvatarFallback>
+            </Avatar>
+          </div>
           <CardTitle className="text-3xl font-medium text-center text-therapy-text">Welcome to Remi</CardTitle>
           <CardDescription className="text-center text-base text-gray-600">
             Your personal reminiscence therapy companion

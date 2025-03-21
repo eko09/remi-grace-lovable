@@ -68,14 +68,33 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
     if (recognitionRef.current) {
       setTranscription('');
       setIsRecording(true);
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+        console.log("Started recording");
+      } catch (err) {
+        console.error("Error starting recording:", err);
+        // If already recording, restart it
+        recognitionRef.current.stop();
+        setTimeout(() => {
+          try {
+            recognitionRef.current?.start();
+          } catch (e) {
+            console.error("Failed to restart recording:", e);
+          }
+        }, 100);
+      }
     }
   };
 
   // Stop recording
   const stopRecording = () => {
     if (recognitionRef.current && isRecording) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+        console.log("Stopped recording");
+      } catch (err) {
+        console.error("Error stopping recording:", err);
+      }
       setIsRecording(false);
       setIsTranscribing(true);
       
@@ -89,13 +108,18 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssist
   // Send the transcribed text
   const sendTranscription = () => {
     if (transcription && transcription.trim()) {
+      // Stop recording if still active
+      if (isRecording && recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (err) {
+          console.error("Error stopping recording before sending:", err);
+        }
+        setIsRecording(false);
+      }
+      
       onAudioComplete(transcription.trim());
       setTranscription('');
-      setIsRecording(false);
-      
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
     } else {
       toast({
         title: "No Speech Detected",

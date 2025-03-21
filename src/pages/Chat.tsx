@@ -4,17 +4,22 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Send, Mic, Keyboard, ArrowLeft, X } from 'lucide-react';
+import { Send, Mic, Keyboard, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import MessageBubble from '@/components/MessageBubble';
 import AudioRecorder from '@/components/AudioRecorder';
 import { useChatCompletion } from '@/hooks/useChatCompletion';
 import { InputMode, Message } from '@/utils/types';
+import { generateSessionSummary } from '@/utils/api';
 
 const Chat: React.FC = () => {
   const [inputMode, setInputMode] = useState<InputMode>(InputMode.TEXT);
   const [messageInput, setMessageInput] = useState('');
   const [participantId, setParticipantId] = useState<string | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryContent, setSummaryContent] = useState<string>('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -27,7 +32,7 @@ const Chat: React.FC = () => {
     } else {
       setParticipantId(storedId);
     }
-  }, [navigate, toast]);
+  }, [navigate]);
   
   const initialMessage: Message = {
     id: '0',
@@ -36,7 +41,7 @@ const Chat: React.FC = () => {
     timestamp: new Date()
   };
   
-  const { messages, isLoading, sendMessage } = useChatCompletion([initialMessage]);
+  const { messages, isLoading, isSpeaking, sendMessage, cancelSpeech } = useChatCompletion([initialMessage]);
   
   useEffect(() => {
     if (inputMode === InputMode.TEXT && inputRef.current) {
@@ -60,6 +65,8 @@ const Chat: React.FC = () => {
   };
   
   const toggleInputMode = () => {
+    // Cancel any ongoing speech when switching modes
+    cancelSpeech();
     setInputMode(prevMode => 
       prevMode === InputMode.TEXT ? InputMode.VOICE : InputMode.TEXT
     );
@@ -70,16 +77,19 @@ const Chat: React.FC = () => {
       await sendMessage(transcription, InputMode.VOICE);
     }
   };
-  
-  const exitSession = () => {
-    navigate('/');
-  };
 
   const endConversation = () => {
-    toast({
-      title: "Conversation Ended",
-      description: "Your therapy session has been completed.",
-    });
+    // Cancel any ongoing speech
+    cancelSpeech();
+    
+    // Generate summary from messages
+    const summary = generateSessionSummary(messages);
+    setSummaryContent(summary);
+    setShowSummary(true);
+  };
+  
+  const closeSummary = () => {
+    setShowSummary(false);
     navigate('/');
   };
 
@@ -87,18 +97,14 @@ const Chat: React.FC = () => {
     <div className="flex flex-col h-screen bg-therapy-light page-transition">
       <header className="py-4 px-6 flex items-center justify-between border-b bg-white">
         <div className="flex items-center">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={exitSession}
-            className="mr-3"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <Avatar className="h-10 w-10 mr-4">
+            <AvatarImage src="/lovable-uploads/2bc5914a-ea60-45b1-9efe-858d1d316cfe.png" alt="Remi" />
+            <AvatarFallback>RM</AvatarFallback>
+          </Avatar>
           <div>
-            <h1 className="text-xl font-medium text-therapy-text">Therapy Session with Remi</h1>
+            <h1 className="text-xl font-medium text-therapy-text">Remi</h1>
             {participantId && (
-              <p className="text-sm text-gray-500">Participant: {participantId}</p>
+              <p className="text-sm text-gray-500">{participantId}</p>
             )}
           </div>
         </div>
@@ -110,7 +116,7 @@ const Chat: React.FC = () => {
             className="text-red-500 hover:bg-red-50"
           >
             <X className="h-4 w-4 mr-2" />
-            End
+            End Conversation
           </Button>
         </div>
       </header>
@@ -163,12 +169,12 @@ const Chat: React.FC = () => {
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="flex-1 input-focus-ring h-12 text-base"
-                  disabled={isLoading}
+                  disabled={isLoading || isSpeaking}
                 />
                 <Button 
                   type="submit" 
                   size="icon" 
-                  disabled={!messageInput.trim() || isLoading}
+                  disabled={!messageInput.trim() || isLoading || isSpeaking}
                   className="h-12 w-12 btn-transition rounded-full"
                 >
                   <Send className="h-5 w-5" />
@@ -178,6 +184,7 @@ const Chat: React.FC = () => {
                   variant="outline" 
                   size="icon" 
                   onClick={toggleInputMode}
+                  disabled={isSpeaking}
                   className="h-12 w-12 btn-transition rounded-full"
                 >
                   <Mic className="h-5 w-5" />
@@ -187,12 +194,13 @@ const Chat: React.FC = () => {
               <div className="flex flex-col w-full items-center">
                 <AudioRecorder 
                   onAudioComplete={handleSpeechInput} 
-                  isAssistantResponding={isLoading} 
+                  isAssistantResponding={isLoading || isSpeaking} 
                 />
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={toggleInputMode}
+                  disabled={isSpeaking}
                   className="mt-4 btn-transition"
                 >
                   <Keyboard className="h-4 w-4 mr-2" /> Switch to Text
@@ -202,6 +210,27 @@ const Chat: React.FC = () => {
           </CardFooter>
         </Card>
       </main>
+
+      {/* Session Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Session Complete</DialogTitle>
+            <DialogDescription>
+              Thank you for your session with Remi today.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4" dangerouslySetInnerHTML={{ __html: summaryContent }} />
+          <div className="flex justify-center mt-4">
+            <Button 
+              onClick={closeSummary}
+              className="w-full sm:w-auto"
+            >
+              Return to Home
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

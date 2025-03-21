@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 export const useChatCompletion = (initialMessages: Message[] = []) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -45,6 +46,8 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       // Convert response to speech for voice input mode
       if (inputMode === InputMode.VOICE) {
         console.log('Converting to speech:', responseContent);
+        setIsSpeaking(true);
+        
         try {
           await textToSpeech(responseContent);
         } catch (speechError) {
@@ -54,6 +57,8 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
             description: "Unable to play audio response. Check your audio settings.",
             variant: "destructive"
           });
+        } finally {
+          setIsSpeaking(false);
         }
       }
       
@@ -77,11 +82,21 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
     setMessages([]);
   }, []);
   
+  // Cancel any ongoing speech
+  const cancelSpeech = useCallback(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  }, []);
+  
   return {
     messages,
     isLoading,
+    isSpeaking,
     error,
     sendMessage,
-    clearMessages
+    clearMessages,
+    cancelSpeech
   };
 };
