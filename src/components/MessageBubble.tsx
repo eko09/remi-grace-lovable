@@ -28,10 +28,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     <div 
       ref={bubbleRef}
       className={cn(
-        "px-4 py-3 rounded-2xl max-w-[85%] mb-4 message-appear senior-friendly",
+        "px-4 py-3 rounded-2xl max-w-[85%] mb-4 message-appear senior-friendly font-lora",
         isUser 
-          ? "ml-auto bg-primary text-primary-foreground rounded-tr-none" 
-          : "mr-auto bg-therapy-gray text-therapy-text rounded-tl-none"
+          ? "ml-auto bg-therapy-blue text-therapy-text rounded-tr-none" 
+          : "mr-auto bg-therapy-beige text-therapy-text rounded-tl-none"
       )}
     >
       {message.content}

@@ -64,10 +64,13 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				therapy: {
-					blue: '#E2F0FF',
-					gray: '#F3F5F7',
-					text: '#2A3342',
-					light: '#FAFBFC',
+					blue: '#C6E2FF', // Light blue
+                    'blue-light': '#D9EDFF', // Even lighter blue
+                    'blue-dark': '#A2CFFF', // Slightly darker blue
+                    beige: '#F5F1E8', // Soft beige
+                    'beige-light': '#FAF7F0', // Lighter beige
+                    'beige-dark': '#E6DFD1', // Slightly darker beige
+					text: '#4A5568', // Softer text color
 					accent: '#9DCEFF'
 				}
 			},
@@ -114,7 +117,9 @@ export default {
 				slideUp: 'slideUp 0.4s ease-out'
 			},
 			fontFamily: {
-				sans: ['Inter', 'sans-serif']
+				sans: ['Inter', 'sans-serif'],
+                lora: ['Lora', 'serif'],
+                playfair: ['Playfair Display', 'serif']
 			}
 		}
 	},

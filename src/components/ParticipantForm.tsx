@@ -45,7 +45,7 @@ const ParticipantForm: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4 bg-therapy-light page-transition">
+    <div className="flex items-center justify-center min-h-screen p-4 bg-therapy-beige page-transition">
       <Card className="w-full max-w-md glass-panel animate-slideUp">
         <CardHeader className="space-y-4">
           <div className="flex justify-center mb-2">
@@ -54,7 +54,7 @@ const ParticipantForm: React.FC = () => {
               <AvatarFallback>RM</AvatarFallback>
             </Avatar>
           </div>
-          <CardTitle className="text-3xl font-medium text-center text-therapy-text">Welcome to Remi</CardTitle>
+          <CardTitle className="text-3xl font-medium text-center text-therapy-text font-playfair">Welcome to Remi</CardTitle>
           <CardDescription className="text-center text-base text-gray-600">
             Your personal reminiscence therapy companion
           </CardDescription>
@@ -63,7 +63,7 @@ const ParticipantForm: React.FC = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="participantId" className="text-sm font-medium text-gray-700 senior-friendly">
+              <label htmlFor="participantId" className="text-sm font-medium text-gray-700 senior-friendly font-lora">
                 Enter Your Participant ID
               </label>
               <div className="relative">
@@ -76,34 +76,28 @@ const ParticipantForm: React.FC = () => {
                     setIsValid(true);
                   }}
                   placeholder="Example: JD 55"
-                  className={`h-12 text-lg input-focus-ring ${!isValid ? 'border-red-500' : ''}`}
+                  className={`h-12 text-lg input-focus-ring ${!isValid ? 'border-red-500' : ''} font-lora`}
                   autoComplete="off"
                 />
               </div>
               {!isValid && (
-                <p className="text-sm text-red-500 mt-1">
+                <p className="text-sm text-red-500 mt-1 font-lora">
                   Please enter your initials followed by the last two digits of your birth year (e.g., JD 55)
                 </p>
               )}
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1 font-lora">
                 Your ID should be your initials followed by the last two digits of your birth year
               </p>
             </div>
             
             <Button 
               type="submit" 
-              className="w-full h-12 text-lg font-medium btn-transition"
+              className="w-full h-12 text-lg font-medium btn-transition bg-therapy-blue hover:bg-therapy-blue-dark text-white font-lora"
             >
               Begin Your Session
             </Button>
           </form>
         </CardContent>
-        
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-500 text-center max-w-xs">
-            Remi is here to listen and help you explore your memories in a supportive environment
-          </p>
-        </CardFooter>
       </Card>
     </div>
   );

@@ -221,9 +221,9 @@ export function generateSessionSummary(messages: Message[]): string {
     return "No conversation took place in this session.";
   }
   
-  // Count messages
-  const userMessageCount = conversationMessages.filter(msg => msg.role === 'user').length;
-  const assistantMessageCount = conversationMessages.filter(msg => msg.role === 'assistant').length;
+  // Extract conversation content for analysis
+  const userMessages = conversationMessages.filter(msg => msg.role === 'user');
+  const assistantMessages = conversationMessages.filter(msg => msg.role === 'assistant');
   
   // Calculate session duration
   const firstMessageTime = conversationMessages[0]?.timestamp || new Date();
@@ -231,25 +231,122 @@ export function generateSessionSummary(messages: Message[]): string {
   const sessionDurationMs = lastMessageTime.getTime() - firstMessageTime.getTime();
   const sessionDurationMinutes = Math.round(sessionDurationMs / (1000 * 60));
   
+  // Analyze content of messages to identify patterns and topics
+  const allContent = userMessages.map(msg => msg.content).join(' ').toLowerCase();
+  
+  // Simple topic detection based on keywords
+  const topics = [];
+  if (allContent.includes('family') || allContent.includes('parent') || allContent.includes('child') || 
+      allContent.includes('daughter') || allContent.includes('son') || allContent.includes('mother') || 
+      allContent.includes('father')) {
+    topics.push('Family');
+  }
+  
+  if (allContent.includes('work') || allContent.includes('job') || allContent.includes('career') || 
+      allContent.includes('profession') || allContent.includes('employment')) {
+    topics.push('Work & Career');
+  }
+  
+  if (allContent.includes('travel') || allContent.includes('vacation') || allContent.includes('trip') || 
+      allContent.includes('visit') || allContent.includes('abroad') || allContent.includes('journey')) {
+    topics.push('Travel & Experiences');
+  }
+  
+  if (allContent.includes('school') || allContent.includes('education') || allContent.includes('learn') || 
+      allContent.includes('college') || allContent.includes('university') || allContent.includes('study')) {
+    topics.push('Education & Learning');
+  }
+  
+  if (allContent.includes('hobby') || allContent.includes('interest') || allContent.includes('activity') || 
+      allContent.includes('garden') || allContent.includes('read') || allContent.includes('cook')) {
+    topics.push('Hobbies & Interests');
+  }
+  
+  // Simple mood detection based on keywords
+  let mood = 'Neutral';
+  const positiveWords = ['happy', 'joy', 'glad', 'good', 'wonderful', 'positive', 'excited', 'love', 'grateful'];
+  const negativeWords = ['sad', 'upset', 'angry', 'frustrated', 'unhappy', 'miss', 'loss', 'difficult', 'hard'];
+  const nostalgicWords = ['remember', 'reminisce', 'past', 'used to', 'when I was', 'back then', 'younger', 'childhood'];
+  
+  let positiveCount = 0;
+  let negativeCount = 0;
+  let nostalgicCount = 0;
+  
+  positiveWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    const matches = allContent.match(regex);
+    if (matches) positiveCount += matches.length;
+  });
+  
+  negativeWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    const matches = allContent.match(regex);
+    if (matches) negativeCount += matches.length;
+  });
+  
+  nostalgicWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    const matches = allContent.match(regex);
+    if (matches) nostalgicCount += matches.length;
+  });
+  
+  if (positiveCount > negativeCount && positiveCount > nostalgicCount) {
+    mood = 'Positive';
+  } else if (negativeCount > positiveCount && negativeCount > nostalgicCount) {
+    mood = 'Reflective';
+  } else if (nostalgicCount > positiveCount && nostalgicCount > negativeCount) {
+    mood = 'Nostalgic';
+  } else {
+    mood = 'Mixed';
+  }
+  
+  // Calculate how engaged the conversation was based on message count and length
+  let engagement = 'Moderate';
+  const avgUserMessageLength = userMessages.reduce((sum, msg) => sum + msg.content.length, 0) / Math.max(userMessages.length, 1);
+  
+  if (userMessages.length > 10 && avgUserMessageLength > 50) {
+    engagement = 'High';
+  } else if (userMessages.length < 5 || avgUserMessageLength < 20) {
+    engagement = 'Low';
+  }
+  
+  // Generate a reflective summary
+  let reflections = '';
+  if (topics.length > 0) {
+    reflections += `<p>During this conversation, you shared memories and thoughts about ${topics.join(', ')}. `;
+  } else {
+    reflections += `<p>You had a thoughtful conversation with Remi today. `;
+  }
+  
+  switch (mood) {
+    case 'Positive':
+      reflections += `The conversation had a positive tone, with expressions of happiness and gratitude throughout.</p>`;
+      break;
+    case 'Reflective':
+      reflections += `You seemed to be in a reflective mood, considering past experiences with thoughtfulness.</p>`;
+      break;
+    case 'Nostalgic':
+      reflections += `You shared several nostalgic memories, connecting with your past experiences with fondness.</p>`;
+      break;
+    default:
+      reflections += `Your conversation displayed a mix of emotions as you explored various memories.</p>`;
+  }
+  
+  reflections += `<p>Your level of engagement was ${engagement.toLowerCase()} during this ${sessionDurationMinutes}-minute session.</p>`;
+  
+  reflections += `<p>Reminiscence therapy helps strengthen connections to your past and can provide comfort and perspective. We look forward to continuing these meaningful conversations.</p>`;
+  
   return `
-    <div class="space-y-4">
-      <h3 class="text-lg font-medium">Session Summary</h3>
+    <div class="space-y-4 font-lora text-therapy-text">
+      <h3 class="text-lg font-medium font-playfair">Session Insights</h3>
       
-      <div class="grid grid-cols-2 gap-2 text-sm">
-        <div>Total Messages:</div>
-        <div>${conversationMessages.length}</div>
-        
-        <div>Your Messages:</div>
-        <div>${userMessageCount}</div>
-        
-        <div>Remi's Responses:</div>
-        <div>${assistantMessageCount}</div>
-        
-        <div>Session Duration:</div>
-        <div>${sessionDurationMinutes} minutes</div>
+      <div class="space-y-3">
+        ${reflections}
       </div>
       
-      <p class="text-sm pt-2">Thank you for participating in this reminiscence therapy session with Remi.</p>
+      <div class="pt-2 text-sm italic">
+        This summary was automatically generated based on your conversation patterns.
+      </div>
     </div>
   `;
 }

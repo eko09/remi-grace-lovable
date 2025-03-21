@@ -50,6 +50,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
         
         try {
           await textToSpeech(responseContent);
+          console.log('Speech synthesis completed successfully');
         } catch (speechError) {
           console.error('Text-to-speech error:', speechError);
           toast({
@@ -87,6 +88,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      console.log('Speech synthesis canceled');
     }
   }, []);
   

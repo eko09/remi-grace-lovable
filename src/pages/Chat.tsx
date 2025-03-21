@@ -94,7 +94,7 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-therapy-light page-transition">
+    <div className="flex flex-col h-screen bg-therapy-beige-light page-transition">
       <header className="py-4 px-6 flex items-center justify-between border-b bg-white">
         <div className="flex items-center">
           <Avatar className="h-10 w-10 mr-4">
@@ -102,7 +102,7 @@ const Chat: React.FC = () => {
             <AvatarFallback>RM</AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-xl font-medium text-therapy-text">Remi</h1>
+            <h1 className="text-xl font-medium text-therapy-text font-playfair">Remi</h1>
             {participantId && (
               <p className="text-sm text-gray-500">{participantId}</p>
             )}
@@ -113,7 +113,7 @@ const Chat: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={endConversation}
-            className="text-red-500 hover:bg-red-50"
+            className="text-red-500 hover:bg-red-50 font-lora"
           >
             <X className="h-4 w-4 mr-2" />
             End Conversation
@@ -124,7 +124,7 @@ const Chat: React.FC = () => {
       <main className="flex-1 overflow-hidden p-4">
         <Card className="flex flex-col h-full glass-panel">
           <CardHeader className="text-center py-3 border-b">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 font-lora">
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long',
                 year: 'numeric', 
@@ -150,9 +150,9 @@ const Chat: React.FC = () => {
               
               {isLoading && (
                 <div className="flex space-x-1 ml-4 mb-4">
-                  <div className="w-3 h-3 rounded-full bg-gray-300 animate-pulse"></div>
-                  <div className="w-3 h-3 rounded-full bg-gray-300 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-3 h-3 rounded-full bg-gray-300 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  <div className="w-3 h-3 rounded-full bg-therapy-blue animate-pulse"></div>
+                  <div className="w-3 h-3 rounded-full bg-therapy-blue animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-3 h-3 rounded-full bg-therapy-blue animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               )}
             </div>
@@ -168,14 +168,14 @@ const Chat: React.FC = () => {
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="flex-1 input-focus-ring h-12 text-base"
+                  className="flex-1 input-focus-ring h-12 text-base font-lora"
                   disabled={isLoading || isSpeaking}
                 />
                 <Button 
                   type="submit" 
                   size="icon" 
                   disabled={!messageInput.trim() || isLoading || isSpeaking}
-                  className="h-12 w-12 btn-transition rounded-full"
+                  className="h-12 w-12 btn-transition rounded-full bg-therapy-blue hover:bg-therapy-blue-dark"
                 >
                   <Send className="h-5 w-5" />
                 </Button>
@@ -185,7 +185,7 @@ const Chat: React.FC = () => {
                   size="icon" 
                   onClick={toggleInputMode}
                   disabled={isSpeaking}
-                  className="h-12 w-12 btn-transition rounded-full"
+                  className="h-12 w-12 btn-transition rounded-full border-therapy-blue-light"
                 >
                   <Mic className="h-5 w-5" />
                 </Button>
@@ -201,7 +201,7 @@ const Chat: React.FC = () => {
                   size="sm" 
                   onClick={toggleInputMode}
                   disabled={isSpeaking}
-                  className="mt-4 btn-transition"
+                  className="mt-4 btn-transition font-lora border-therapy-blue-light"
                 >
                   <Keyboard className="h-4 w-4 mr-2" /> Switch to Text
                 </Button>
@@ -213,10 +213,10 @@ const Chat: React.FC = () => {
 
       {/* Session Summary Dialog */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md font-lora bg-therapy-beige-light">
           <DialogHeader>
-            <DialogTitle>Session Complete</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-playfair">Session Complete</DialogTitle>
+            <DialogDescription className="text-therapy-text">
               Thank you for your session with Remi today.
             </DialogDescription>
           </DialogHeader>
@@ -224,7 +224,7 @@ const Chat: React.FC = () => {
           <div className="flex justify-center mt-4">
             <Button 
               onClick={closeSummary}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-therapy-blue hover:bg-therapy-blue-dark"
             >
               Return to Home
             </Button>
