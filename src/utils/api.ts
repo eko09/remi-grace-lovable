@@ -1,4 +1,3 @@
-
 import { Message } from './types';
 
 // API configuration for OpenAI
@@ -53,7 +52,7 @@ export async function getChatCompletion(messages: Message[]): Promise<string> {
   }
 }
 
-// Improved text-to-speech function with better voice handling and error management
+// Fixed text-to-speech function to prevent app freezing
 export async function textToSpeech(text: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!('speechSynthesis' in window)) {
@@ -65,76 +64,88 @@ export async function textToSpeech(text: string): Promise<void> {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
     
-    // Create utterance with improved settings
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9; // Slightly slower rate for clarity
-    utterance.pitch = 1;
-    utterance.volume = 1;
+    // Break text into smaller chunks (sentences) to prevent freezing
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    const maxChunkLength = 100; // Shorter chunks to prevent freezing
+    const chunks: string[] = [];
     
-    // Split text into smaller chunks if it's too long
-    // This helps prevent the speech synthesis from cutting off
-    const maxLength = 150;
-    if (text.length > maxLength) {
-      const chunks = splitTextIntoChunks(text, maxLength);
-      speakInChunks(chunks, 0, resolve, reject);
-      return;
-    }
-    
-    // Get available voices
-    let voices = speechSynthesis.getVoices();
-    
-    // If no voices available yet, wait for them to load
-    if (voices.length === 0) {
-      speechSynthesis.onvoiceschanged = () => {
-        voices = speechSynthesis.getVoices();
-        setPreferredVoice();
-      };
-    } else {
-      setPreferredVoice();
-    }
-    
-    function setPreferredVoice() {
-      // Try to find a female voice for Remi
-      const preferredVoice = voices.find(voice => 
-        voice.name.includes('Female') || 
-        voice.name.includes('Samantha') ||
-        voice.name.includes('Victoria') ||
-        (voice.name.includes('Google') && voice.name.includes('female'))
-      );
-      
-      if (preferredVoice) {
-        console.log('Using voice:', preferredVoice.name);
-        utterance.voice = preferredVoice;
-      } else if (voices.length > 0) {
-        // Fallback to first available voice
-        utterance.voice = voices[0];
-        console.log('Falling back to voice:', voices[0].name);
+    // Create smaller chunks based on sentences
+    let currentChunk = '';
+    for (const sentence of sentences) {
+      if (currentChunk.length + sentence.length <= maxChunkLength) {
+        currentChunk += (currentChunk ? ' ' : '') + sentence;
+      } else {
+        if (currentChunk) {
+          chunks.push(currentChunk);
+        }
+        currentChunk = sentence;
       }
     }
     
-    // Set up event handlers
-    utterance.onend = () => {
-      console.log('Speech synthesis finished successfully');
-      resolve();
-    };
-    
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
-      reject(new Error('Speech synthesis failed'));
-    };
-    
-    // Speak the text
-    try {
-      console.log('Starting speech synthesis...');
-      speechSynthesis.speak(utterance);
-    } catch (err) {
-      console.error('Error starting speech synthesis:', err);
-      reject(err);
+    if (currentChunk) {
+      chunks.push(currentChunk);
     }
+    
+    // Speak each chunk with a slight delay between them
+    let chunkIndex = 0;
+    
+    function speakNextChunk() {
+      if (chunkIndex >= chunks.length) {
+        resolve();
+        return;
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex]);
+      
+      // Set voice properties for better performance
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      // Try to find a voice that won't freeze the app
+      const voices = window.speechSynthesis.getVoices();
+      // Prefer standard voices that are less resource-intensive
+      const preferredVoice = voices.find(voice => 
+        !voice.localService && (
+          voice.name.includes('Google') || 
+          voice.name.includes('English') ||
+          voice.name.includes('Microsoft')
+        )
+      ) || voices[0];
+      
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      // Handle events
+      utterance.onend = () => {
+        chunkIndex++;
+        // Use a small timeout to prevent freezing
+        setTimeout(speakNextChunk, 50);
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event);
+        chunkIndex++;
+        // Continue with next chunk even after an error
+        setTimeout(speakNextChunk, 50);
+      };
+      
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch (error) {
+        console.error('Error speaking chunk:', error);
+        chunkIndex++;
+        setTimeout(speakNextChunk, 50);
+      }
+    }
+    
+    // Start speaking
+    speakNextChunk();
   });
 }
 
-// Helper function to split text into smaller chunks at sentence boundaries
+// Remove the unused functions that might be causing performance issues
 function splitTextIntoChunks(text: string, maxLength: number): string[] {
   const sentences = text.split(/(?<=[.!?])\s+/);
   const chunks: string[] = [];
@@ -158,7 +169,6 @@ function splitTextIntoChunks(text: string, maxLength: number): string[] {
   return chunks;
 }
 
-// Helper function to speak text in chunks sequentially
 function speakInChunks(chunks: string[], index: number, resolve: () => void, reject: (error: Error) => void) {
   if (index >= chunks.length) {
     resolve();
