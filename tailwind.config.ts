@@ -64,11 +64,11 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				therapy: {
-					blue: '#50487e2', // Updated to the requested blue color
-                    'blue-light': '#50487e2', // Updated light blue to match
-                    'blue-dark': '#50487e2', // Updated dark blue to match
+					blue: '#3399FF', // Updated to the requested blue color
+                    'blue-light': '#3399FF', // Updated light blue to match
+                    'blue-dark': '#3399FF', // Updated dark blue to match
                     beige: '#F5F1E8', // Soft beige
-                    'blue-user': '#C3EEFA', // New color for user chat bubbles
+                    'blue-user': '#C3EEFA', // User chat bubble color
                     'beige-light': '#FAF7F0', // Lighter beige
                     'beige-dark': '#E6DFD1', // Slightly darker beige
 					text: '#4A5568', // Softer text color
