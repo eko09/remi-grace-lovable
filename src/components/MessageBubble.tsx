@@ -28,7 +28,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     <div 
       ref={bubbleRef}
       className={cn(
-        "px-4 py-3 rounded-2xl max-w-[85%] mb-4 message-appear senior-friendly font-lora",
+        "px-4 py-3 rounded-2xl max-w-[85%] mb-4 message-appear senior-friendly font-lora text-left",
         isUser 
           ? "ml-auto bg-therapy-blue-user text-therapy-text rounded-tr-none" 
           : "mr-auto bg-therapy-beige text-therapy-text rounded-tl-none"

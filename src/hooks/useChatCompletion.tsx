@@ -1,7 +1,7 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Message, InputMode } from '../utils/types';
-import { getChatCompletion, textToSpeech } from '../utils/api';
+import { getChatCompletion, textToSpeech, initSpeechSynthesis } from '../utils/api';
 import { useToast } from "@/components/ui/use-toast";
 
 export const useChatCompletion = (initialMessages: Message[] = []) => {
@@ -10,6 +10,11 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Initialize speech synthesis
+  useEffect(() => {
+    initSpeechSynthesis();
+  }, []);
 
   // Send a message and get a response
   const sendMessage = useCallback(async (content: string, inputMode: InputMode = InputMode.TEXT) => {

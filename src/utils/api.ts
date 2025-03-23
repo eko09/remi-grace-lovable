@@ -1,4 +1,3 @@
-
 import { Message } from './types';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -72,7 +71,7 @@ export async function getChatCompletion(messages: Message[]): Promise<string> {
   }
 }
 
-// Fixed text-to-speech function to prevent app freezing
+// Improved text-to-speech function
 export async function textToSpeech(text: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!('speechSynthesis' in window)) {
@@ -84,161 +83,83 @@ export async function textToSpeech(text: string): Promise<void> {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
     
-    // Break text into smaller chunks (sentences) to prevent freezing
-    const sentences = text.split(/(?<=[.!?])\s+/);
-    const maxChunkLength = 100; // Shorter chunks to prevent freezing
-    const chunks: string[] = [];
+    // Create the utterance with the full text
+    const utterance = new SpeechSynthesisUtterance(text);
     
-    // Create smaller chunks based on sentences
-    let currentChunk = '';
-    for (const sentence of sentences) {
-      if (currentChunk.length + sentence.length <= maxChunkLength) {
-        currentChunk += (currentChunk ? ' ' : '') + sentence;
-      } else {
-        if (currentChunk) {
-          chunks.push(currentChunk);
-        }
-        currentChunk = sentence;
-      }
+    // Set voice properties
+    utterance.rate = 0.9; // Slightly slower than default
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    // Get available voices
+    const voices = window.speechSynthesis.getVoices();
+    console.log(`Available voices: ${voices.length}`);
+    
+    // Try to find a female voice for Remi
+    const preferredVoice = voices.find(voice => 
+      voice.name.includes('Female') || 
+      voice.name.includes('Samantha') || 
+      voice.name.includes('Google US English Female') ||
+      voice.name.includes('Microsoft Zira')
+    );
+    
+    if (preferredVoice) {
+      console.log(`Using voice: ${preferredVoice.name}`);
+      utterance.voice = preferredVoice;
+    } else if (voices.length > 0) {
+      console.log(`No preferred voice found, using default: ${voices[0].name}`);
     }
     
-    if (currentChunk) {
-      chunks.push(currentChunk);
-    }
+    // Handle events
+    utterance.onend = () => {
+      console.log('Speech synthesis completed');
+      resolve();
+    };
     
-    // Speak each chunk with a slight delay between them
-    let chunkIndex = 0;
-    
-    function speakNextChunk() {
-      if (chunkIndex >= chunks.length) {
-        resolve();
-        return;
-      }
-      
-      const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex]);
-      
-      // Set voice properties for better performance
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-      
-      // Try to find a voice that won't freeze the app
-      const voices = window.speechSynthesis.getVoices();
-      // Prefer standard voices that are less resource-intensive
-      const preferredVoice = voices.find(voice => 
-        !voice.localService && (
-          voice.name.includes('Google') || 
-          voice.name.includes('English') ||
-          voice.name.includes('Microsoft')
-        )
-      ) || voices[0];
-      
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
-      
-      // Handle events
-      utterance.onend = () => {
-        chunkIndex++;
-        // Use a small timeout to prevent freezing
-        setTimeout(speakNextChunk, 50);
-      };
-      
-      utterance.onerror = (event) => {
-        console.error('Speech synthesis error:', event);
-        chunkIndex++;
-        // Continue with next chunk even after an error
-        setTimeout(speakNextChunk, 50);
-      };
-      
-      try {
-        window.speechSynthesis.speak(utterance);
-      } catch (error) {
-        console.error('Error speaking chunk:', error);
-        chunkIndex++;
-        setTimeout(speakNextChunk, 50);
-      }
-    }
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      reject(new Error('Speech synthesis failed'));
+    };
     
     // Start speaking
-    speakNextChunk();
+    try {
+      window.speechSynthesis.speak(utterance);
+      console.log('Started speaking');
+    } catch (error) {
+      console.error('Error starting speech:', error);
+      reject(error);
+    }
   });
 }
 
-// Remove the unused functions that might be causing performance issues
-function splitTextIntoChunks(text: string, maxLength: number): string[] {
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  const chunks: string[] = [];
-  let currentChunk = '';
-  
-  for (const sentence of sentences) {
-    if (currentChunk.length + sentence.length <= maxLength) {
-      currentChunk += (currentChunk ? ' ' : '') + sentence;
-    } else {
-      if (currentChunk) {
-        chunks.push(currentChunk);
-      }
-      currentChunk = sentence;
+// Function to ensure voices are loaded
+export function initSpeechSynthesis(): void {
+  if ('speechSynthesis' in window) {
+    // Force voices to load
+    const voices = window.speechSynthesis.getVoices();
+    
+    if (voices.length > 0) {
+      console.log('Voices loaded initially:', voices.length);
+      // Log available voices for debugging
+      voices.forEach((voice, index) => {
+        console.log(`Voice ${index}: ${voice.name} (${voice.lang})`);
+      });
     }
+    
+    // Set up the onvoiceschanged event
+    window.speechSynthesis.onvoiceschanged = () => {
+      const updatedVoices = window.speechSynthesis.getVoices();
+      console.log('Voices loaded after change:', updatedVoices.length);
+      // Log available voices for debugging
+      updatedVoices.forEach((voice, index) => {
+        console.log(`Voice ${index}: ${voice.name} (${voice.lang})`);
+      });
+    };
   }
-  
-  if (currentChunk) {
-    chunks.push(currentChunk);
-  }
-  
-  return chunks;
 }
 
-function speakInChunks(chunks: string[], index: number, resolve: () => void, reject: (error: Error) => void) {
-  if (index >= chunks.length) {
-    resolve();
-    return;
-  }
-  
-  const utterance = new SpeechSynthesisUtterance(chunks[index]);
-  utterance.rate = 0.9;
-  utterance.pitch = 1;
-  utterance.volume = 1;
-  
-  // Set available voice if possible
-  const voices = speechSynthesis.getVoices();
-  const preferredVoice = voices.find(voice => 
-    voice.name.includes('Female') || 
-    voice.name.includes('Samantha') ||
-    voice.name.includes('Victoria')
-  );
-  
-  if (preferredVoice) {
-    utterance.voice = preferredVoice;
-  }
-  
-  utterance.onend = () => {
-    speakInChunks(chunks, index + 1, resolve, reject);
-  };
-  
-  utterance.onerror = (event) => {
-    console.error('Speech synthesis error in chunk:', event);
-    reject(new Error('Speech synthesis failed'));
-  };
-  
-  speechSynthesis.speak(utterance);
-}
-
-// Initialize voices as soon as possible
-if ('speechSynthesis' in window) {
-  // Force voices to load
-  speechSynthesis.getVoices();
-  
-  // Set up the onvoiceschanged event
-  speechSynthesis.onvoiceschanged = () => {
-    const voices = speechSynthesis.getVoices();
-    console.log('Voices loaded:', voices.length);
-    // Log available voices for debugging
-    voices.forEach((voice, index) => {
-      console.log(`Voice ${index}: ${voice.name} (${voice.lang})`);
-    });
-  };
-}
+// Call this function to initialize speech synthesis
+initSpeechSynthesis();
 
 // Function to generate a session summary from messages
 export function generateSessionSummary(messages: Message[]): string {
@@ -296,7 +217,7 @@ export function generateSessionSummary(messages: Message[]): string {
   let mood = 'Neutral';
   const positiveWords = ['happy', 'joy', 'glad', 'good', 'wonderful', 'positive', 'excited', 'love', 'grateful'];
   const negativeWords = ['sad', 'upset', 'angry', 'frustrated', 'unhappy', 'miss', 'loss', 'difficult', 'hard'];
-  const nostalgicWords = ['remember', 'reminisce', 'past', 'used to', 'when I was', 'back then', 'younger', 'childhood'];
+  const nostalgicWords = ['remember', 'reminisce', 'past', 'used to', 'when I was', 'back then', 'childhood'];
   
   let positiveCount = 0;
   let negativeCount = 0;
