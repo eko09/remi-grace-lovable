@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -128,6 +127,7 @@ const Chat: React.FC = () => {
     navigate('/');
   };
 
+  
   return (
     <div className="flex flex-col h-screen bg-therapy-beige-light page-transition">
       <header className="py-4 px-6 flex items-center justify-between border-b bg-white">

@@ -1,56 +1,54 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, MessageSquare } from 'lucide-react';
+import { MessageSquare, Mic } from 'lucide-react';
 
 const ConversationMode: React.FC = () => {
   const navigate = useNavigate();
   const participantId = sessionStorage.getItem('participantId');
-  
-  // Redirect to home if no participant ID
+
+  // Redirect to home if no participant ID is found
   React.useEffect(() => {
     if (!participantId) {
       navigate('/');
     }
   }, [participantId, navigate]);
 
-  const handleSelectMode = (mode: 'chat' | 'voice') => {
-    sessionStorage.setItem('conversationMode', mode);
-    navigate(mode === 'chat' ? '/chat' : '/voice-chat');
+  const handleModeSelection = (mode: 'text' | 'voice') => {
+    navigate(mode === 'text' ? '/chat' : '/voice-chat');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-therapy-beige-light p-4">
-      <Card className="w-full max-w-md glass-panel">
-        <CardHeader className="text-center pb-2">
-          <h1 className="text-2xl font-playfair text-therapy-text">Choose Conversation Mode</h1>
-          <p className="text-sm text-gray-500">How would you like to talk with Remi today?</p>
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-2">
+            <img 
+              src="/lovable-uploads/2bc5914a-ea60-45b1-9efe-858d1d316cfe.png" 
+              alt="Remi Logo" 
+              className="h-16 w-16 rounded-full"
+            />
+          </div>
+          <CardTitle className="text-2xl font-playfair">Select Conversation Mode</CardTitle>
+          <p className="text-sm text-gray-500">Choose how you'd like to interact with Remi</p>
         </CardHeader>
-        <CardContent className="space-y-6 p-6">
+        <CardContent className="space-y-4">
           <Button 
-            onClick={() => handleSelectMode('chat')}
-            className="w-full py-8 text-lg justify-start space-x-4 bg-white hover:bg-gray-50 text-therapy-text border border-gray-200"
-            variant="outline"
+            onClick={() => handleModeSelection('text')}
+            className="w-full h-24 flex flex-col items-center justify-center space-y-2 bg-[#3399FF] hover:bg-[#2277DD]"
           >
-            <MessageSquare size={24} className="text-[#3399FF]" />
-            <div className="flex flex-col items-start">
-              <span className="font-medium">Text Chat</span>
-              <span className="text-sm text-gray-500">Type messages to communicate with Remi</span>
-            </div>
+            <MessageSquare className="h-8 w-8" />
+            <span className="text-lg">Text Chat</span>
           </Button>
           
           <Button 
-            onClick={() => handleSelectMode('voice')}
-            className="w-full py-8 text-lg justify-start space-x-4 bg-white hover:bg-gray-50 text-therapy-text border border-gray-200"
-            variant="outline"
+            onClick={() => handleModeSelection('voice')}
+            className="w-full h-24 flex flex-col items-center justify-center space-y-2 bg-[#3399FF] hover:bg-[#2277DD]"
           >
-            <Mic size={24} className="text-[#3399FF]" />
-            <div className="flex flex-col items-start">
-              <span className="font-medium">Voice Chat</span>
-              <span className="text-sm text-gray-500">Speak and listen to Remi through voice</span>
-            </div>
+            <Mic className="h-8 w-8" />
+            <span className="text-lg">Voice Chat</span>
           </Button>
         </CardContent>
       </Card>
