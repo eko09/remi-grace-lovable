@@ -3,98 +3,88 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 
 const ParticipantForm: React.FC = () => {
   const [participantId, setParticipantId] = useState('');
-  const [isValid, setIsValid] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Validate participant ID format (initials + last two digits of birth year)
-  const validateParticipantId = (id: string) => {
-    // Basic validation: at least 2 letters followed by 2 digits
-    const regex = /^[A-Za-z]{2,}\s?[0-9]{2}$/;
-    return regex.test(id);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (validateParticipantId(participantId)) {
-      // Store participant ID in session storage
-      sessionStorage.setItem('participantId', participantId);
-      
-      // Navigate to chat page with smooth transition
-      navigate('/chat');
-      
+    if (!participantId.trim()) {
       toast({
-        title: "Welcome to Remi",
-        description: "Your therapy session is ready to begin.",
+        title: "Error",
+        description: "Please enter a participant ID",
+        variant: "destructive",
       });
-    } else {
-      setIsValid(false);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Check if participant exists in Supabase, if not create a new record
+      const { error } = await supabase
+        .from('participants')
+        .upsert([{ participant_id: participantId.trim() }], { onConflict: 'participant_id' });
+      
+      if (error) throw error;
+      
+      // Store the ID in session storage
+      sessionStorage.setItem('participantId', participantId.trim());
+      
+      // Navigate to conversation mode selection page
+      navigate('/conversation-mode');
+    } catch (error) {
+      console.error('Error saving participant:', error);
       toast({
-        title: "Invalid ID Format",
-        description: "Please enter your initials followed by the last two digits of your birth year (e.g., JD 55)",
-        variant: "destructive"
+        title: "Error",
+        description: "Failed to save participant information. Please try again.",
+        variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4 bg-therapy-beige page-transition">
-      <Card className="w-full max-w-md glass-panel animate-slideUp">
-        <CardHeader className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-therapy-beige-light p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
-            <Avatar className="h-32 w-32">
-              <AvatarImage src="/lovable-uploads/2bc5914a-ea60-45b1-9efe-858d1d316cfe.png" alt="Remi" />
-              <AvatarFallback>RM</AvatarFallback>
-            </Avatar>
+            <img 
+              src="/lovable-uploads/2bc5914a-ea60-45b1-9efe-858d1d316cfe.png" 
+              alt="Remi Logo" 
+              className="h-16 w-16 rounded-full"
+            />
           </div>
-          <CardTitle className="text-3xl font-medium text-center text-therapy-text font-playfair">Welcome to Remi</CardTitle>
-          <CardDescription className="text-center text-base text-gray-600">
-            Your reminiscence therapy companion
-          </CardDescription>
+          <CardTitle className="text-2xl font-playfair">Welcome to Remi</CardTitle>
+          <p className="text-sm text-gray-500">Your reminiscence therapy companion</p>
         </CardHeader>
-        
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="participantId" className="text-sm font-medium text-gray-700 senior-friendly font-lora">
-                Enter Your Participant ID
-              </label>
-              <div className="relative">
-                <Input
-                  id="participantId"
-                  type="text"
-                  value={participantId}
-                  onChange={(e) => {
-                    setParticipantId(e.target.value);
-                    setIsValid(true);
-                  }}
-                  placeholder="Example: JD 55"
-                  className={`h-12 text-lg input-focus-ring ${!isValid ? 'border-red-500' : ''} font-lora`}
-                  autoComplete="off"
-                />
-              </div>
-              {!isValid && (
-                <p className="text-sm text-red-500 mt-1 font-lora">
-                  Please enter your initials followed by the last two digits of your birth year (e.g., JD 55)
-                </p>
-              )}
-              <p className="text-xs text-gray-500 mt-1 font-lora">
-                Your ID should be your initials followed by the last two digits of your birth year
-              </p>
+              <Label htmlFor="participantId">Participant ID</Label>
+              <Input
+                id="participantId"
+                placeholder="Enter your participant ID"
+                value={participantId}
+                onChange={(e) => setParticipantId(e.target.value)}
+                className="input-focus-ring"
+              />
             </div>
-            
             <Button 
               type="submit" 
-              className="w-full h-12 text-lg font-medium btn-transition bg-therapy-blue hover:bg-therapy-blue-dark text-white font-lora"
+              className="w-full bg-[#3399FF] hover:bg-[#2277DD]"
+              disabled={isSubmitting}
             >
-              Begin Your Session
+              {isSubmitting ? "Starting..." : "Start Session"}
             </Button>
           </form>
         </CardContent>

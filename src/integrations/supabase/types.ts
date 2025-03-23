@@ -9,7 +9,59 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      conversations: {
+        Row: {
+          duration: number | null
+          id: string
+          participant_id: string
+          summary: string | null
+          timestamp: string
+          transcript: string | null
+          turns: number | null
+        }
+        Insert: {
+          duration?: number | null
+          id?: string
+          participant_id: string
+          summary?: string | null
+          timestamp?: string
+          transcript?: string | null
+          turns?: number | null
+        }
+        Update: {
+          duration?: number | null
+          id?: string
+          participant_id?: string
+          summary?: string | null
+          timestamp?: string
+          transcript?: string | null
+          turns?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      participants: {
+        Row: {
+          created_at: string
+          participant_id: string
+        }
+        Insert: {
+          created_at?: string
+          participant_id: string
+        }
+        Update: {
+          created_at?: string
+          participant_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,9 +1,22 @@
+
 import { Message } from './types';
+import { supabase } from "@/integrations/supabase/client";
 
 // API configuration for OpenAI
 const API_URL = 'https://api.openai.com/v1/chat/completions';
-const API_KEY = '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';
 const MODEL = 'gpt-4o';
+
+// Function to get the API key from Supabase
+async function getOpenAIKey() {
+  try {
+    const { data, error } = await supabase.functions.invoke('get-openai-key');
+    if (error) throw error;
+    return data.key;
+  } catch (error) {
+    console.error('Error getting OpenAI key:', error);
+    return null;
+  }
+}
 
 // Prompt for Remi's persona
 const SYSTEM_PROMPT = `### Role: Remi ###
@@ -13,6 +26,13 @@ You are Remi. You are a therapist trained on reminiscence therapy, facilitating 
 // Function to get a response from the API
 export async function getChatCompletion(messages: Message[]): Promise<string> {
   try {
+    // Get API key from Supabase
+    const API_KEY = await getOpenAIKey();
+    
+    if (!API_KEY) {
+      throw new Error('Failed to retrieve OpenAI API key');
+    }
+
     // Format the messages for the API
     const formattedMessages = [
       { role: 'system', content: SYSTEM_PROMPT },

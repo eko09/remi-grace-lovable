@@ -1,28 +1,26 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Send, X } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import MessageBubble from '@/components/MessageBubble';
+import AudioRecorder from '@/components/AudioRecorder';
 import { useChatCompletion } from '@/hooks/useChatCompletion';
 import { InputMode, Message } from '@/utils/types';
 import { generateSessionSummary } from '@/utils/api';
 import { supabase } from "@/integrations/supabase/client";
 
-const Chat: React.FC = () => {
-  const [messageInput, setMessageInput] = useState('');
+const VoiceChat: React.FC = () => {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryContent, setSummaryContent] = useState<string>('');
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [messageCount, setMessageCount] = useState<number>(0);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -45,25 +43,10 @@ const Chat: React.FC = () => {
   
   const { messages, isLoading, isSpeaking, sendMessage, cancelSpeech } = useChatCompletion([initialMessage]);
   
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, []);
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (messageInput.trim() && !isLoading) {
+  const handleSpeechInput = async (transcription: string) => {
+    if (transcription.trim()) {
       setMessageCount(prev => prev + 1);
-      await sendMessage(messageInput, InputMode.TEXT);
-      setMessageInput('');
-    }
-  };
-  
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void handleSubmit(e);
+      await sendMessage(transcription, InputMode.VOICE);
     }
   };
 
@@ -99,7 +82,7 @@ const Chat: React.FC = () => {
       });
     }
   };
-  
+
   const endConversation = () => {
     // Cancel any ongoing speech
     cancelSpeech();
@@ -137,7 +120,7 @@ const Chat: React.FC = () => {
             <AvatarFallback>RM</AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-xl font-medium text-therapy-text font-playfair">Remi (Text Mode)</h1>
+            <h1 className="text-xl font-medium text-therapy-text font-playfair">Remi (Voice Mode)</h1>
             {participantId && (
               <p className="text-sm text-gray-500">{participantId}</p>
             )}
@@ -179,7 +162,7 @@ const Chat: React.FC = () => {
                   key={message.id} 
                   message={message} 
                   isLatest={index === messages.length - 1}
-                  inputMode={InputMode.TEXT}
+                  inputMode={InputMode.VOICE}
                 />
               ))}
               
@@ -194,26 +177,15 @@ const Chat: React.FC = () => {
           </CardContent>
           
           <CardFooter className="p-4 border-t">
-            <form onSubmit={handleSubmit} className="flex w-full space-x-2">
-              <Input
-                ref={inputRef}
-                type="text"
-                placeholder="Type your message here..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex-1 input-focus-ring h-12 text-base font-lora"
-                disabled={isLoading || isSpeaking}
+            <div className="flex flex-col w-full items-center">
+              <AudioRecorder 
+                onAudioComplete={handleSpeechInput} 
+                isAssistantResponding={isLoading || isSpeaking} 
               />
-              <Button 
-                type="submit" 
-                size="icon" 
-                disabled={!messageInput.trim() || isLoading || isSpeaking}
-                className="h-12 w-12 btn-transition rounded-full bg-[#3399FF] hover:bg-[#2277DD]"
-              >
-                <Send className="h-5 w-5" />
-              </Button>
-            </form>
+              <p className="mt-4 text-sm text-gray-500">
+                Speak to Remi and she will respond with voice
+              </p>
+            </div>
           </CardFooter>
         </Card>
       </main>
@@ -242,4 +214,4 @@ const Chat: React.FC = () => {
   );
 };
 
-export default Chat;
+export default VoiceChat;
