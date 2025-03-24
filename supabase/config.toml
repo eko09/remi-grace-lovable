@@ -1,4 +1,5 @@
 
+
 project_id = "supabase"
 
 [api]
@@ -34,3 +35,4 @@ system_role = "service_role"
 [functions.google-tts]
 verify_jwt = false
 system_role = "service_role"
+

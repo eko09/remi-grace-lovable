@@ -56,15 +56,20 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           try {
             // Send audio to backend for transcription
             const audioBase64 = await blobToBase64(audioBlob);
+            
+            console.log('Sending audio for transcription, size:', audioBase64.length);
+            
             const response = await sendAudioForTranscription(audioBase64);
             
             if (response && response.text) {
+              console.log('Received transcription:', response.text);
               setTranscript(response.text);
               onAudioComplete(response.text);
             } else {
+              console.error('Transcription failed, response:', response);
               toast({
                 title: "Transcription Error",
-                description: "Could not convert your speech to text. Please try again.",
+                description: "Could not convert your speech to text. Please try again and speak clearly.",
                 variant: "destructive"
               });
             }
@@ -130,20 +135,22 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   // Send audio to backend for transcription
   const sendAudioForTranscription = async (audioBase64: string): Promise<{ text: string } | null> => {
     try {
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      console.log('Calling OpenAI transcription API');
+      
+      // Update to use environment variable for API key
+      const response = await fetch('/api/transcribe', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          audio: audioBase64,
-          model: 'whisper-1',
-          language: 'en'
+          audio: audioBase64
         })
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Transcription API error:', errorText);
         throw new Error(`Transcription failed: ${response.statusText}`);
       }
       

@@ -76,6 +76,9 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       // Make sure to load and play the audio, especially important on mobile
       try {
         await audio.load();
+        audio.volume = 1.0; // Ensure volume is at maximum
+        
+        console.log('Attempting to play audio...');
         const playPromise = audio.play();
         
         if (playPromise !== undefined) {
@@ -277,15 +280,47 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
   // Add function to enable audio playback on user interaction
   // This is especially important for mobile browsers
   const enableAudio = useCallback(() => {
+    console.log('Attempting to enable audio playback...');
     const audio = audioRef.current;
+    
+    // Create a short silent audio context and play it to enable audio on iOS
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContext) {
+        const audioCtx = new AudioContext();
+        const oscillator = audioCtx.createOscillator();
+        oscillator.frequency.value = 0; // Silent
+        oscillator.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.001);
+        console.log('Created silent audio context to unlock audio');
+      }
+    } catch (e) {
+      console.warn('Failed to create audio context:', e);
+    }
+    
+    // Also try with the HTML audio element
+    audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
+    audio.load();
+    audio.loop = false;
+    audio.volume = 0;
+    
     audio.play().then(() => {
+      console.log('Silent audio played successfully - audio should now be enabled');
       audio.pause();
       audio.currentTime = 0;
-      console.log('Audio playback enabled');
+      audio.volume = 1.0;
     }).catch(e => {
-      console.error('Failed to enable audio:', e);
+      console.error('Failed to enable audio with silent play:', e);
+      
+      // Try one more approach - create a user gesture listener
+      toast({
+        title: "Enable Audio",
+        description: "Please tap or click anywhere on the screen to enable audio playback",
+        duration: 5000,
+      });
     });
-  }, []);
+  }, [toast]);
   
   return {
     messages,
