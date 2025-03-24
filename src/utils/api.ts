@@ -22,56 +22,7 @@ const SYSTEM_PROMPT = `### Role: Remi ###
 *Persona:* 
 You are Remi. You are a therapist trained on reminiscence therapy, facilitating therapy sessions through conversation for older adults 65+.`;
 
-// Function to get a response from the API
-export async function getChatCompletion(messages: Message[]): Promise<string> {
-  try {
-    // Get API key from Supabase
-    const API_KEY = await getOpenAIKey();
-    
-    if (!API_KEY) {
-      throw new Error('Failed to retrieve OpenAI API key');
-    }
-
-    // Format the messages for the API
-    const formattedMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...messages.map(msg => ({ 
-        role: msg.role, 
-        content: msg.content
-      }))
-    ];
-
-    // Make the API request
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: formattedMessages,
-        temperature: 0.7,
-        max_tokens: 500
-      })
-    });
-
-    // Parse the response
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('API error:', data);
-      throw new Error(data.error?.message || 'Failed to get response from AI');
-    }
-
-    return data.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response. Please try again.';
-  } catch (error) {
-    console.error('Error getting chat completion:', error);
-    return 'I apologize, but there was an error processing your request. Please try again later.';
-  }
-}
-
-// Improved text-to-speech function
+// Improved text-to-speech function with better voice selection
 export async function textToSpeech(text: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!('speechSynthesis' in window)) {
@@ -86,28 +37,56 @@ export async function textToSpeech(text: string): Promise<void> {
     // Create the utterance with the full text
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Set voice properties
-    utterance.rate = 0.9; // Slightly slower than default
-    utterance.pitch = 1;
+    // Set voice properties for a soothing female voice
+    utterance.rate = 0.95; // Slightly slower than default
+    utterance.pitch = 1.05; // Slightly higher pitch for a more upbeat tone
     utterance.volume = 1;
     
     // Get available voices
     const voices = window.speechSynthesis.getVoices();
     console.log(`Available voices: ${voices.length}`);
     
-    // Try to find a female voice for Remi
-    const preferredVoice = voices.find(voice => 
-      voice.name.includes('Female') || 
-      voice.name.includes('Samantha') || 
-      voice.name.includes('Google US English Female') ||
-      voice.name.includes('Microsoft Zira')
-    );
+    // Preferred voices in order (common female voices across platforms)
+    const preferredVoiceNames = [
+      'Samantha', // iOS/macOS
+      'Google US English Female', // Chrome
+      'Microsoft Zira', // Windows
+      'Google UK English Female',
+      'Karen', // macOS/iOS
+      'Microsoft Susan', // Windows
+      'Female' // Generic fallback
+    ];
     
-    if (preferredVoice) {
-      console.log(`Using voice: ${preferredVoice.name}`);
-      utterance.voice = preferredVoice;
-    } else if (voices.length > 0) {
-      console.log(`No preferred voice found, using default: ${voices[0].name}`);
+    let selectedVoice = null;
+    
+    // Try to find a preferred voice
+    for (const voiceName of preferredVoiceNames) {
+      const voice = voices.find(v => v.name.includes(voiceName));
+      if (voice) {
+        selectedVoice = voice;
+        console.log(`Selected voice: ${voice.name}`);
+        break;
+      }
+    }
+    
+    // If no preferred voice found, try to find any female voice
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => 
+        v.name.toLowerCase().includes('female') || 
+        v.name.includes('Karen') ||
+        v.name.includes('Samantha') ||
+        v.name.includes('Alex')
+      );
+    }
+    
+    // If still no voice, use the first available
+    if (!selectedVoice && voices.length > 0) {
+      selectedVoice = voices[0];
+      console.log(`No preferred voice found, using default: ${selectedVoice.name}`);
+    }
+    
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
     }
     
     // Handle events
@@ -124,7 +103,7 @@ export async function textToSpeech(text: string): Promise<void> {
     // Start speaking
     try {
       window.speechSynthesis.speak(utterance);
-      console.log('Started speaking');
+      console.log('Started speaking with voice:', utterance.voice?.name);
     } catch (error) {
       console.error('Error starting speech:', error);
       reject(error);
@@ -300,4 +279,53 @@ export function generateSessionSummary(messages: Message[]): string {
       </div>
     </div>
   `;
+}
+
+// Function to get a response from the API
+export async function getChatCompletion(messages: Message[]): Promise<string> {
+  try {
+    // Get API key from Supabase
+    const API_KEY = await getOpenAIKey();
+    
+    if (!API_KEY) {
+      throw new Error('Failed to retrieve OpenAI API key');
+    }
+
+    // Format the messages for the API
+    const formattedMessages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...messages.map(msg => ({ 
+        role: msg.role, 
+        content: msg.content
+      }))
+    ];
+
+    // Make the API request
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+
+    // Parse the response
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('API error:', data);
+      throw new Error(data.error?.message || 'Failed to get response from AI');
+    }
+
+    return data.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response. Please try again.';
+  } catch (error) {
+    console.error('Error getting chat completion:', error);
+    return 'I apologize, but there was an error processing your request. Please try again later.';
+  }
 }

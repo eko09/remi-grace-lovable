@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Message, InputMode } from '../utils/types';
 import { getChatCompletion, textToSpeech, initSpeechSynthesis } from '../utils/api';
 import { useToast } from "@/components/ui/use-toast";
@@ -10,14 +10,22 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Initialize speech synthesis
   useEffect(() => {
     initSpeechSynthesis();
+    
+    // Cleanup speech on unmount
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, []);
 
   // Send a message and get a response
-  const sendMessage = useCallback(async (content: string, inputMode: InputMode = InputMode.TEXT) => {
+  const sendMessage = useCallback(async (content: string, inputMode: InputMode = InputMode.TEXT, previousConversation?: string | null) => {
     if (!content.trim()) return;
     
     setError(null);
@@ -36,7 +44,22 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
     try {
       // Get response from AI
       const updatedMessages = [...messages, userMessage];
-      const responseContent = await getChatCompletion(updatedMessages);
+      
+      // Include previous conversation context if available (for RAG functionality)
+      const contextPrompt = previousConversation 
+        ? `Here's a summary of our previous conversation to help inform your response: ${previousConversation}\n\nNow, please respond to my message: ${content}`
+        : content;
+      
+      // Use the contextPrompt if we have previous conversation
+      const messageToSend = previousConversation 
+        ? { ...userMessage, content: contextPrompt } 
+        : userMessage;
+      
+      const finalMessages = previousConversation 
+        ? [...messages.slice(0, -1), messageToSend] 
+        : updatedMessages;
+      
+      const responseContent = await getChatCompletion(finalMessages);
       
       // Add assistant message
       const assistantMessage: Message = {

@@ -19,3 +19,9 @@ export enum InputMode {
   TEXT = 'text',
   VOICE = 'voice'
 }
+
+export interface ConversationSummary {
+  topic: string;
+  mood: string;
+  keyPoints: string[];
+}

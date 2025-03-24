@@ -7,7 +7,7 @@ import { generateSessionSummary } from '@/utils/api';
 import { useChatCompletion } from '@/hooks/useChatCompletion';
 import { supabase } from "@/integrations/supabase/client";
 
-export const useConversationManager = () => {
+export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryContent, setSummaryContent] = useState<string>('');
@@ -38,6 +38,25 @@ export const useConversationManager = () => {
     }
   }, [navigate]);
 
+  // Function to fetch previous conversation
+  const fetchPreviousConversation = async (participantId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('transcript')
+        .eq('participant_id', participantId)
+        .order('timestamp', { ascending: false })
+        .limit(1);
+      
+      if (error) throw error;
+      
+      return data.length > 0 ? data[0].transcript : null;
+    } catch (error) {
+      console.error('Error fetching previous conversation:', error);
+      return null;
+    }
+  };
+
   const saveConversationToDatabase = async (summary: string, transcript: string, duration: number, turns: number) => {
     try {
       // First, ensure participant exists in the database
@@ -47,7 +66,7 @@ export const useConversationManager = () => {
       
       if (participantError) throw participantError;
       
-      // Then save the conversation
+      // Then save the conversation with the mode
       const { error } = await supabase
         .from('conversations')
         .insert([{
@@ -56,7 +75,8 @@ export const useConversationManager = () => {
           transcript,
           duration,
           turns,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          mode: mode // Store the conversation mode
         }]);
       
       if (error) throw error;
@@ -106,5 +126,6 @@ export const useConversationManager = () => {
     setMessageCount,
     sendMessage,
     endConversation,
+    fetchPreviousConversation,
   };
 };
