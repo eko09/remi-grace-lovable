@@ -80,7 +80,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           toast({
             title: "No Audio Detected",
             description: "No audio was recorded. Please try again and speak clearly.",
-            variant: "warning"
+            variant: "default"
           });
         }
         

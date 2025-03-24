@@ -25,7 +25,14 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   };
   
   // Get chat completion hook
-  const { messages, isLoading, isSpeaking, sendMessage, cancelSpeech } = useChatCompletion([initialMessage]);
+  const { 
+    messages, 
+    isLoading, 
+    isSpeaking, 
+    sendMessage, 
+    cancelSpeech,
+    enableAudio
+  } = useChatCompletion([initialMessage]);
   
   // Check for participant ID
   useEffect(() => {
@@ -127,5 +134,6 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     sendMessage,
     endConversation,
     fetchPreviousConversation,
+    enableAudio,
   };
 };

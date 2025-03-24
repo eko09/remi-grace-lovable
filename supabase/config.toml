@@ -26,12 +26,11 @@ refresh_token_reuse_interval = 10
 [storage]
 file_size_limit = "50MiB"
 
-[[functions]]
-name = "get-openai-key"
+[functions]
+[functions.get-openai-key]
 verify_jwt = false
 system_role = "service_role"
 
-[[functions]]
-name = "google-tts"
+[functions.google-tts]
 verify_jwt = false
 system_role = "service_role"
