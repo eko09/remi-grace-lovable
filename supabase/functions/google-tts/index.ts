@@ -19,11 +19,19 @@ serve(async (req) => {
       throw new Error('Text is required')
     }
 
+    console.log('Generating speech for text:', text.substring(0, 50) + '...');
+    
+    // Get OpenAI API key from environment
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY is not set in environment');
+    }
+
     // Generate speech from text using OpenAI's TTS API
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -36,9 +44,12 @@ serve(async (req) => {
 
     if (!response.ok) {
       const error = await response.json()
+      console.error('OpenAI API error:', error);
       throw new Error(error.error?.message || 'Failed to generate speech')
     }
 
+    console.log('Speech generated successfully');
+    
     // Convert audio buffer to base64
     const arrayBuffer = await response.arrayBuffer()
     const base64Audio = btoa(
@@ -52,6 +63,7 @@ serve(async (req) => {
       },
     )
   } catch (error) {
+    console.error('Error in TTS function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

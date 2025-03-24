@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Mic, Square } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AudioRecorderProps {
   onAudioComplete: (transcript: string) => void;
@@ -59,14 +60,27 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
             
             console.log('Sending audio for transcription, size:', audioBase64.length);
             
-            const response = await sendAudioForTranscription(audioBase64);
+            // Use Supabase edge function directly to transcribe
+            const { data, error } = await supabase.functions.invoke('voice-to-text', {
+              body: { audio: audioBase64 }
+            });
             
-            if (response && response.text) {
-              console.log('Received transcription:', response.text);
-              setTranscript(response.text);
-              onAudioComplete(response.text);
+            if (error) {
+              console.error('Error calling transcription function:', error);
+              toast({
+                title: "Transcription Error",
+                description: "Could not convert your speech to text. Please try again.",
+                variant: "default"
+              });
+              return;
+            }
+            
+            if (data && data.text) {
+              console.log('Received transcription:', data.text);
+              setTranscript(data.text);
+              onAudioComplete(data.text);
             } else {
-              console.error('Transcription failed, response:', response);
+              console.error('Transcription failed, response:', data);
               toast({
                 title: "Transcription Error",
                 description: "Could not convert your speech to text. Please try again and speak clearly.",
@@ -130,37 +144,6 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-  };
-
-  // Send audio to backend for transcription
-  const sendAudioForTranscription = async (audioBase64: string): Promise<{ text: string } | null> => {
-    try {
-      console.log('Calling OpenAI transcription API');
-      
-      // Update to use environment variable for API key
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          audio: audioBase64
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Transcription API error:', errorText);
-        throw new Error(`Transcription failed: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      return result;
-      
-    } catch (error) {
-      console.error('Error transcribing audio:', error);
-      return null;
-    }
   };
 
   return (

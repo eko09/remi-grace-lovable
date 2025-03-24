@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Message, InputMode } from '../utils/types';
 import { getChatCompletion } from '../utils/api';
 import { useToast } from "@/components/ui/use-toast";
@@ -13,163 +13,6 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
   const { toast } = useToast();
   const audioRef = useRef(new Audio());
   
-  // Setup audio element
-  useEffect(() => {
-    // Set up event handlers for audio playback
-    const audio = audioRef.current;
-    
-    const handleAudioEnded = () => {
-      console.log('Audio playback completed');
-      setIsSpeaking(false);
-    };
-    
-    const handleAudioError = (e: any) => {
-      console.error('Audio playback error:', e);
-      setIsSpeaking(false);
-      toast({
-        title: "Audio Error",
-        description: "There was an error playing the audio response.",
-        variant: "destructive"
-      });
-    };
-    
-    audio.addEventListener('ended', handleAudioEnded);
-    audio.addEventListener('error', handleAudioError);
-    
-    // Cleanup
-    return () => {
-      audio.removeEventListener('ended', handleAudioEnded);
-      audio.removeEventListener('error', handleAudioError);
-      audio.pause();
-      audio.src = '';
-    };
-  }, [toast]);
-
-  // Function to use Google Cloud TTS
-  const textToSpeechGoogle = async (text: string): Promise<void> => {
-    try {
-      console.log('Converting to speech using Google Cloud TTS:', text);
-      
-      const { data, error } = await supabase.functions.invoke('google-tts', {
-        body: { 
-          text,
-          voice: 'en-US-Wavenet-F' // A natural sounding female voice
-        }
-      });
-      
-      if (error) {
-        console.error('Error calling TTS function:', error);
-        throw new Error('Failed to generate speech');
-      }
-      
-      if (!data.audioContent) {
-        throw new Error('No audio content returned');
-      }
-      
-      // Create audio from base64
-      const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
-      
-      // Play the audio
-      const audio = audioRef.current;
-      audio.src = audioSrc;
-      
-      // Make sure to load and play the audio, especially important on mobile
-      try {
-        await audio.load();
-        audio.volume = 1.0; // Ensure volume is at maximum
-        
-        console.log('Attempting to play audio...');
-        const playPromise = audio.play();
-        
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.error('Play error (likely user interaction needed):', error);
-            // We'll set isSpeaking to false since we couldn't play
-            setIsSpeaking(false);
-            
-            // On mobile, especially iOS, autoplay is often blocked
-            toast({
-              title: "Tap to hear Remi",
-              description: "Please tap the screen to enable audio playback",
-              duration: 5000,
-            });
-          });
-        }
-      } catch (e) {
-        console.error('Audio play error:', e);
-        setIsSpeaking(false);
-        throw e;
-      }
-      
-      console.log('Speech synthesis initiated successfully');
-    } catch (error) {
-      console.error('Text-to-speech error:', error);
-      setIsSpeaking(false);
-      throw error;
-    }
-  };
-
-  // Fallback to browser's speech synthesis if Google TTS fails
-  const fallbackBrowserTTS = (text: string): void => {
-    console.log('Falling back to browser TTS');
-    
-    if (!('speechSynthesis' in window)) {
-      console.error('Speech synthesis not supported');
-      setIsSpeaking(false);
-      return;
-    }
-    
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-    
-    // Create utterance
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Get available voices
-    const voices = window.speechSynthesis.getVoices();
-    console.log(`Available voices: ${voices.length}`);
-    
-    // Try to find a female voice
-    const preferredVoiceNames = [
-      'Samantha', 'Google US English Female', 'Microsoft Zira',
-      'Google UK English Female', 'Karen', 'Microsoft Susan', 'Female'
-    ];
-    
-    let selectedVoice = null;
-    
-    for (const voiceName of preferredVoiceNames) {
-      const voice = voices.find(v => v.name.includes(voiceName));
-      if (voice) {
-        selectedVoice = voice;
-        console.log(`Selected voice: ${voice.name}`);
-        break;
-      }
-    }
-    
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-    
-    // Set voice properties
-    utterance.rate = 0.95;  // Slightly slower
-    utterance.pitch = 1.05; // Slightly higher pitch for female voice
-    utterance.volume = 1;   // Full volume
-    
-    // Set events
-    utterance.onend = () => {
-      console.log('Speech synthesis completed');
-      setIsSpeaking(false);
-    };
-    
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
-      setIsSpeaking(false);
-    };
-    
-    // Start speaking
-    window.speechSynthesis.speak(utterance);
-  };
-
   // Send a message and get a response
   const sendMessage = useCallback(async (content: string, inputMode: InputMode = InputMode.TEXT, previousConversation?: string | null) => {
     if (!content.trim()) return;
@@ -217,20 +60,19 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Convert response to speech for voice input mode
+      // For voice chat mode only - this won't execute in text chat mode
       if (inputMode === InputMode.VOICE) {
-        console.log('Converting to speech:', responseContent);
+        console.log('Voice mode: Converting to speech:', responseContent);
         setIsSpeaking(true);
         
         try {
-          // Use Google Cloud TTS with fallback to browser TTS
-          await textToSpeechGoogle(responseContent).catch(err => {
-            console.error('Google TTS failed, falling back to browser TTS:', err);
-            fallbackBrowserTTS(responseContent);
-          });
+          // Only try text-to-speech in voice mode
+          await textToSpeechGoogle(responseContent);
         } catch (speechError) {
-          console.error('All text-to-speech methods failed:', speechError);
+          console.error('Text-to-speech methods failed:', speechError);
           setIsSpeaking(false);
+          
+          // Only show error in voice mode
           toast({
             title: "Speech Synthesis Error",
             description: "Unable to play audio response. Tap the screen to try again.",
@@ -254,6 +96,62 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       setIsLoading(false);
     }
   }, [messages, toast]);
+  
+  // Function to use Google Cloud TTS - only used in voice mode
+  const textToSpeechGoogle = async (text: string): Promise<void> => {
+    try {
+      console.log('Converting to speech using Google Cloud TTS:', text);
+      
+      const { data, error } = await supabase.functions.invoke('google-tts', {
+        body: { 
+          text,
+          voice: 'en-US-Wavenet-F' // A natural sounding female voice
+        }
+      });
+      
+      if (error) {
+        console.error('Error calling TTS function:', error);
+        throw new Error('Failed to generate speech');
+      }
+      
+      if (!data.audioContent) {
+        throw new Error('No audio content returned');
+      }
+      
+      // Create audio from base64
+      const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
+      
+      // Play the audio
+      const audio = audioRef.current;
+      audio.src = audioSrc;
+      
+      // Make sure to load and play the audio, especially important on mobile
+      try {
+        await audio.load();
+        audio.volume = 1.0; // Ensure volume is at maximum
+        
+        console.log('Attempting to play audio...');
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error('Play error (likely user interaction needed):', error);
+            setIsSpeaking(false);
+          });
+        }
+      } catch (e) {
+        console.error('Audio play error:', e);
+        setIsSpeaking(false);
+        throw e;
+      }
+      
+      console.log('Speech synthesis initiated successfully');
+    } catch (error) {
+      console.error('Text-to-speech error:', error);
+      setIsSpeaking(false);
+      throw error;
+    }
+  };
   
   // Clear all messages
   const clearMessages = useCallback(() => {
@@ -312,13 +210,6 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       audio.volume = 1.0;
     }).catch(e => {
       console.error('Failed to enable audio with silent play:', e);
-      
-      // Try one more approach - create a user gesture listener
-      toast({
-        title: "Enable Audio",
-        description: "Please tap or click anywhere on the screen to enable audio playback",
-        duration: 5000,
-      });
     });
   }, [toast]);
   
