@@ -1,5 +1,4 @@
 
-
 project_id = "supabase"
 
 [api]
@@ -27,12 +26,8 @@ refresh_token_reuse_interval = 10
 [storage]
 file_size_limit = "50MiB"
 
-[functions]
 [functions.get-openai-key]
 verify_jwt = false
-system_role = "service_role"
 
 [functions.google-tts]
 verify_jwt = false
-system_role = "service_role"
-

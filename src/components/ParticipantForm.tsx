@@ -8,7 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-const ParticipantForm: React.FC = () => {
+interface ParticipantFormProps {
+  onSubmit?: (id: string) => void;
+}
+
+const ParticipantForm: React.FC<ParticipantFormProps> = ({ onSubmit }) => {
   const [participantId, setParticipantId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -39,8 +43,13 @@ const ParticipantForm: React.FC = () => {
       // Store the ID in session storage
       sessionStorage.setItem('participantId', participantId.trim());
       
-      // Navigate to conversation mode selection page
-      navigate('/conversation-mode');
+      // Call the onSubmit callback if provided
+      if (onSubmit) {
+        onSubmit(participantId.trim());
+      } else {
+        // Navigate to conversation mode selection page
+        navigate('/conversation-mode');
+      }
     } catch (error) {
       console.error('Error saving participant:', error);
       toast({
