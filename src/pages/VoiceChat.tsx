@@ -4,9 +4,14 @@ import { InputMode } from '@/utils/types';
 import AudioRecorder from '@/components/AudioRecorder';
 import { useConversationManager } from '@/hooks/useConversationManager';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Volume2 } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 
 const VoiceChat: React.FC = () => {
   const [previousConversation, setPreviousConversation] = useState<string | null>(null);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const { toast } = useToast();
   
   const {
     participantId,
@@ -21,6 +26,7 @@ const VoiceChat: React.FC = () => {
     sendMessage,
     endConversation,
     fetchPreviousConversation,
+    enableAudio
   } = useConversationManager(InputMode.VOICE);
   
   // Fetch previous conversation for RAG
@@ -41,7 +47,28 @@ const VoiceChat: React.FC = () => {
     if (transcript && !isLoading) {
       console.log('Voice transcript:', transcript);
       setMessageCount(prev => prev + 1);
+      
+      if (!audioEnabled) {
+        enableAudioPlayback();
+      }
+      
       await sendMessage(transcript, InputMode.VOICE, previousConversation);
+    }
+  };
+  
+  // Enable audio playback on mobile
+  const enableAudioPlayback = () => {
+    try {
+      enableAudio();
+      setAudioEnabled(true);
+      console.log('Audio playback enabled');
+    } catch (error) {
+      console.error('Failed to enable audio:', error);
+      toast({
+        title: "Audio Playback Issue",
+        description: "There was a problem enabling audio. Please tap the audio button again.",
+        duration: 5000,
+      });
     }
   };
   
@@ -58,11 +85,22 @@ const VoiceChat: React.FC = () => {
   // For voice chat, we'll render a simplified UI with Remi's avatar in the center
   const voiceChatContent = (
     <div className="flex flex-col items-center justify-center flex-1 py-10">
-      <div className="mb-6">
+      <div className="mb-6 relative" onClick={enableAudioPlayback}>
         <Avatar className="h-28 w-28 sm:h-40 sm:w-40">
           <AvatarImage src="/lovable-uploads/2bc5914a-ea60-45b1-9efe-858d1d316cfe.png" alt="Remi" />
           <AvatarFallback>R</AvatarFallback>
         </Avatar>
+        
+        {!audioEnabled && (
+          <Button 
+            size="sm" 
+            className="absolute -bottom-2 -right-2 bg-[#3399FF] hover:bg-[#2277DD] rounded-full"
+            onClick={enableAudioPlayback}
+          >
+            <Volume2 className="h-4 w-4 mr-1" />
+            <span className="text-xs">Enable Audio</span>
+          </Button>
+        )}
       </div>
       <div className="text-center mb-6 text-therapy-text">
         {isLoading ? (
@@ -70,7 +108,11 @@ const VoiceChat: React.FC = () => {
         ) : isSpeaking ? (
           <p className="animate-pulse">Speaking...</p>
         ) : (
-          <p>Press and hold to speak with Remi</p>
+          <p>
+            {audioEnabled 
+              ? "Press and hold to speak with Remi" 
+              : "Tap to enable audio, then speak with Remi"}
+          </p>
         )}
       </div>
     </div>
@@ -91,13 +133,15 @@ const VoiceChat: React.FC = () => {
             )}
           </div>
         </div>
-        <button
+        <Button
           onClick={endConversation}
-          className="text-xs sm:text-sm px-2 sm:px-4 h-8 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded-md"
+          size="sm"
+          variant="outline"
+          className="text-sm px-2 sm:px-4 h-8 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded-md"
         >
           <span className="hidden sm:inline">End Conversation</span>
           <span className="sm:hidden">End</span>
-        </button>
+        </Button>
       </header>
       
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md">

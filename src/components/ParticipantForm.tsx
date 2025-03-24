@@ -78,6 +78,9 @@ const ParticipantForm: React.FC = () => {
                 onChange={(e) => setParticipantId(e.target.value)}
                 className="input-focus-ring"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Example: JD56 (Your initials + last two digits of birth year)
+              </p>
             </div>
             <Button 
               type="submit" 

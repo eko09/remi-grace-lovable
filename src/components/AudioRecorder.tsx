@@ -1,178 +1,189 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Send } from 'lucide-react';
+import { Mic, Square } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 
 interface AudioRecorderProps {
-  onAudioComplete: (text: string) => void;
+  onAudioComplete: (transcript: string) => void;
   isAssistantResponding: boolean;
 }
 
-const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioComplete, isAssistantResponding }) => {
+const AudioRecorder: React.FC<AudioRecorderProps> = ({ 
+  onAudioComplete, 
+  isAssistantResponding 
+}) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [transcription, setTranscription] = useState('');
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [transcript, setTranscript] = useState('');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
 
-  // Initialize speech recognition on component mount
   useEffect(() => {
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognitionAPI();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
+    return () => {
+      // Clean up recording if component unmounts while recording
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, [isRecording]);
 
-      recognitionRef.current.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0].transcript)
-          .join(' ');
-        
-        setTranscription(transcript);
-      };
-
-      recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        toast({
-          title: "Speech Recognition Error",
-          description: `Error: ${event.error}. Please try again.`,
-          variant: "destructive"
-        });
-        stopRecording();
+  const startRecording = async () => {
+    // Reset previous recordings
+    audioChunksRef.current = [];
+    setTranscript('');
+    
+    try {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Create media recorder
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      // Set up recording events
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
       
-      recognitionRef.current.onend = () => {
-        setIsRecording(false);
+      mediaRecorder.onstop = async () => {
+        // Combine chunks into a single blob
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        if (audioBlob.size > 0) {
+          try {
+            // Send audio to backend for transcription
+            const audioBase64 = await blobToBase64(audioBlob);
+            const response = await sendAudioForTranscription(audioBase64);
+            
+            if (response && response.text) {
+              setTranscript(response.text);
+              onAudioComplete(response.text);
+            } else {
+              toast({
+                title: "Transcription Error",
+                description: "Could not convert your speech to text. Please try again.",
+                variant: "destructive"
+              });
+            }
+          } catch (error) {
+            console.error('Error processing audio:', error);
+            toast({
+              title: "Processing Error",
+              description: "There was a problem processing your audio. Please try again.",
+              variant: "destructive"
+            });
+          }
+        } else {
+          toast({
+            title: "No Audio Detected",
+            description: "No audio was recorded. Please try again and speak clearly.",
+            variant: "warning"
+          });
+        }
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
       };
-    } else {
+      
+      // Start recording
+      mediaRecorder.start();
+      setIsRecording(true);
+      
+    } catch (error) {
+      console.error('Error starting recording:', error);
       toast({
-        title: "Speech Recognition Not Supported",
-        description: "Your browser doesn't support speech recognition. Please try a different browser.",
+        title: "Microphone Access Error",
+        description: "Please allow microphone access to use voice chat.",
         variant: "destructive"
       });
     }
-
-    // Cleanup function
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-      stopRecording();
-    };
-  }, [toast]);
-
-  // Start recording
-  const startRecording = () => {
-    if (recognitionRef.current) {
-      setTranscription('');
-      setIsRecording(true);
-      try {
-        recognitionRef.current.start();
-        console.log("Started recording");
-      } catch (err) {
-        console.error("Error starting recording:", err);
-        // If already recording, restart it
-        recognitionRef.current.stop();
-        setTimeout(() => {
-          try {
-            recognitionRef.current?.start();
-          } catch (e) {
-            console.error("Failed to restart recording:", e);
-          }
-        }, 100);
-      }
-    }
   };
 
-  // Stop recording
   const stopRecording = () => {
-    if (recognitionRef.current && isRecording) {
-      try {
-        recognitionRef.current.stop();
-        console.log("Stopped recording");
-      } catch (err) {
-        console.error("Error stopping recording:", err);
-      }
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
       setIsRecording(false);
-      setIsTranscribing(true);
-      
-      // Short delay to ensure final transcription is captured
-      setTimeout(() => {
-        setIsTranscribing(false);
-      }, 500);
     }
   };
 
-  // Send the transcribed text
-  const sendTranscription = () => {
-    if (transcription && transcription.trim()) {
-      // Stop recording if still active
-      if (isRecording && recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (err) {
-          console.error("Error stopping recording before sending:", err);
+  // Convert blob to base64
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          // Remove the data URL prefix (e.g., "data:audio/webm;base64,")
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        } else {
+          reject(new Error('Failed to convert blob to base64'));
         }
-        setIsRecording(false);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Send audio to backend for transcription
+  const sendAudioForTranscription = async (audioBase64: string): Promise<{ text: string } | null> => {
+    try {
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          audio: audioBase64,
+          model: 'whisper-1',
+          language: 'en'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Transcription failed: ${response.statusText}`);
       }
       
-      onAudioComplete(transcription.trim());
-      setTranscription('');
-    } else {
-      toast({
-        title: "No Speech Detected",
-        description: "Please speak clearly and try again.",
-      });
+      const result = await response.json();
+      return result;
+      
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      return null;
     }
   };
 
   return (
-    <div className="flex flex-col items-center">
-      {transcription && (
-        <div className="w-full p-3 mb-3 bg-therapy-gray rounded-lg text-therapy-text">
-          <p className="text-sm">{transcription}</p>
-          <div className="flex justify-end mt-2">
-            <Button 
-              onClick={sendTranscription}
-              className="btn-transition"
-              size="sm"
-              disabled={isAssistantResponding}
-            >
-              <Send className="h-4 w-4 mr-1" /> Send
-            </Button>
-          </div>
-        </div>
-      )}
-      
-      <Button
-        type="button"
-        size="lg"
-        disabled={isAssistantResponding || isTranscribing}
-        onClick={isRecording ? stopRecording : startRecording}
-        variant={isRecording ? "destructive" : "default"}
-        className={`rounded-full h-16 w-16 flex items-center justify-center ${
-          isRecording ? 'animate-pulse' : 'btn-transition'
-        }`}
-      >
-        {isRecording ? 
-          <MicOff className="h-8 w-8" /> : 
-          <Mic className="h-8 w-8" />
-        }
-      </Button>
-      
-      {isRecording && (
-        <p className="text-sm text-therapy-text mt-2">
-          Speak now...
-        </p>
-      )}
-      
-      {isTranscribing && (
-        <p className="text-sm text-therapy-text mt-2 animate-pulse">
-          Processing your message...
-        </p>
-      )}
+    <div className="w-full flex justify-center">
+      <div className="relative inline-block">
+        <Button
+          type="button"
+          size="icon"
+          disabled={isAssistantResponding}
+          className={`h-16 w-16 rounded-full transition-all duration-300 ${
+            isRecording 
+              ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+              : 'bg-[#3399FF] hover:bg-[#2277DD]'
+          }`}
+          onTouchStart={startRecording}
+          onMouseDown={startRecording}
+          onTouchEnd={stopRecording}
+          onMouseUp={stopRecording}
+          onMouseLeave={isRecording ? stopRecording : undefined}
+        >
+          {isRecording ? (
+            <Square className="h-6 w-6" />
+          ) : (
+            <Mic className="h-6 w-6" />
+          )}
+        </Button>
+        <span className="text-xs text-gray-500 pt-2 block text-center">
+          {isRecording ? 'Release to stop' : 'Hold to speak'}
+        </span>
+      </div>
     </div>
   );
 };

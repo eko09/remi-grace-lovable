@@ -1,8 +1,9 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Message, InputMode } from '../utils/types';
-import { getChatCompletion, textToSpeech, initSpeechSynthesis } from '../utils/api';
+import { getChatCompletion } from '../utils/api';
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useChatCompletion = (initialMessages: Message[] = []) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -10,84 +11,161 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  // Initialize speech synthesis
+  const audioRef = useRef(new Audio());
+  
+  // Setup audio element
   useEffect(() => {
-    initSpeechSynthesis();
+    // Set up event handlers for audio playback
+    const audio = audioRef.current;
     
-    // Configure voice settings
-    if ('speechSynthesis' in window) {
-      speechRef.current = new SpeechSynthesisUtterance();
+    const handleAudioEnded = () => {
+      console.log('Audio playback completed');
+      setIsSpeaking(false);
+    };
+    
+    const handleAudioError = (e: any) => {
+      console.error('Audio playback error:', e);
+      setIsSpeaking(false);
+      toast({
+        title: "Audio Error",
+        description: "There was an error playing the audio response.",
+        variant: "destructive"
+      });
+    };
+    
+    audio.addEventListener('ended', handleAudioEnded);
+    audio.addEventListener('error', handleAudioError);
+    
+    // Cleanup
+    return () => {
+      audio.removeEventListener('ended', handleAudioEnded);
+      audio.removeEventListener('error', handleAudioError);
+      audio.pause();
+      audio.src = '';
+    };
+  }, [toast]);
+
+  // Function to use Google Cloud TTS
+  const textToSpeechGoogle = async (text: string): Promise<void> => {
+    try {
+      console.log('Converting to speech using Google Cloud TTS:', text);
       
-      // Use a female voice with pleasant tone
-      const voices = window.speechSynthesis.getVoices();
-      // Try to find a female English voice
-      const preferredVoices = [
-        // Different systems have different voice names, try common ones
-        "Google US English Female", 
-        "Microsoft Zira Desktop",
-        "Female English Voice", 
-        "Samantha",
-        "Victoria"
-      ];
+      const { data, error } = await supabase.functions.invoke('google-tts', {
+        body: { 
+          text,
+          voice: 'en-US-Wavenet-F' // A natural sounding female voice
+        }
+      });
       
-      // Function to set a voice when voices are available
-      const setVoice = () => {
-        const voices = window.speechSynthesis.getVoices();
-        console.log("Available voices:", voices.map(v => v.name));
-        
-        // Find a preferred female voice
-        let selectedVoice = null;
-        for (const preferredVoice of preferredVoices) {
-          selectedVoice = voices.find(voice => 
-            voice.name.toLowerCase().includes(preferredVoice.toLowerCase())
-          );
-          if (selectedVoice) break;
-        }
-        
-        // If no preferred voice found, try to find any female voice
-        if (!selectedVoice) {
-          selectedVoice = voices.find(voice => 
-            voice.name.toLowerCase().includes('female') || 
-            voice.name.toLowerCase().includes('woman')
-          );
-        }
-        
-        // If still no voice, use the first English voice
-        if (!selectedVoice) {
-          selectedVoice = voices.find(voice => voice.lang.includes('en'));
-        }
-        
-        // Fall back to first voice if nothing else works
-        if (!selectedVoice && voices.length > 0) {
-          selectedVoice = voices[0];
-        }
-        
-        if (selectedVoice && speechRef.current) {
-          console.log("Selected voice:", selectedVoice.name);
-          speechRef.current.voice = selectedVoice;
-          speechRef.current.rate = 1.0; // Normal speaking rate
-          speechRef.current.pitch = 1.1; // Slightly higher pitch for a pleasant tone
-          speechRef.current.volume = 1.0;
-        }
-      };
+      if (error) {
+        console.error('Error calling TTS function:', error);
+        throw new Error('Failed to generate speech');
+      }
       
-      // Handle voice availability
-      if (voices.length > 0) {
-        setVoice();
-      } else {
-        window.speechSynthesis.onvoiceschanged = setVoice;
+      if (!data.audioContent) {
+        throw new Error('No audio content returned');
+      }
+      
+      // Create audio from base64
+      const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
+      
+      // Play the audio
+      const audio = audioRef.current;
+      audio.src = audioSrc;
+      
+      // Make sure to load and play the audio, especially important on mobile
+      try {
+        await audio.load();
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error('Play error (likely user interaction needed):', error);
+            // We'll set isSpeaking to false since we couldn't play
+            setIsSpeaking(false);
+            
+            // On mobile, especially iOS, autoplay is often blocked
+            toast({
+              title: "Tap to hear Remi",
+              description: "Please tap the screen to enable audio playback",
+              duration: 5000,
+            });
+          });
+        }
+      } catch (e) {
+        console.error('Audio play error:', e);
+        setIsSpeaking(false);
+        throw e;
+      }
+      
+      console.log('Speech synthesis initiated successfully');
+    } catch (error) {
+      console.error('Text-to-speech error:', error);
+      setIsSpeaking(false);
+      throw error;
+    }
+  };
+
+  // Fallback to browser's speech synthesis if Google TTS fails
+  const fallbackBrowserTTS = (text: string): void => {
+    console.log('Falling back to browser TTS');
+    
+    if (!('speechSynthesis' in window)) {
+      console.error('Speech synthesis not supported');
+      setIsSpeaking(false);
+      return;
+    }
+    
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    // Create utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Get available voices
+    const voices = window.speechSynthesis.getVoices();
+    console.log(`Available voices: ${voices.length}`);
+    
+    // Try to find a female voice
+    const preferredVoiceNames = [
+      'Samantha', 'Google US English Female', 'Microsoft Zira',
+      'Google UK English Female', 'Karen', 'Microsoft Susan', 'Female'
+    ];
+    
+    let selectedVoice = null;
+    
+    for (const voiceName of preferredVoiceNames) {
+      const voice = voices.find(v => v.name.includes(voiceName));
+      if (voice) {
+        selectedVoice = voice;
+        console.log(`Selected voice: ${voice.name}`);
+        break;
       }
     }
     
-    // Cleanup speech on unmount
-    return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+    
+    // Set voice properties
+    utterance.rate = 0.95;  // Slightly slower
+    utterance.pitch = 1.05; // Slightly higher pitch for female voice
+    utterance.volume = 1;   // Full volume
+    
+    // Set events
+    utterance.onend = () => {
+      console.log('Speech synthesis completed');
+      setIsSpeaking(false);
     };
-  }, []);
+    
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      setIsSpeaking(false);
+    };
+    
+    // Start speaking
+    window.speechSynthesis.speak(utterance);
+  };
 
   // Send a message and get a response
   const sendMessage = useCallback(async (content: string, inputMode: InputMode = InputMode.TEXT, previousConversation?: string | null) => {
@@ -142,41 +220,19 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
         setIsSpeaking(true);
         
         try {
-          // Use our enhanced speech synthesis instead of the API call
-          if (speechRef.current && 'speechSynthesis' in window) {
-            speechRef.current.text = responseContent;
-            
-            // Set up event handlers
-            speechRef.current.onend = () => {
-              console.log('Speech synthesis completed naturally');
-              setIsSpeaking(false);
-            };
-            
-            speechRef.current.onerror = (event) => {
-              console.error('Speech synthesis error:', event);
-              setIsSpeaking(false);
-              toast({
-                title: "Speech Error",
-                description: "There was an error with the speech synthesis.",
-                variant: "destructive"
-              });
-            };
-            
-            // Start speaking
-            window.speechSynthesis.speak(speechRef.current);
-          } else {
-            // Fall back to the API-based method if speechSynthesis is not available
-            await textToSpeech(responseContent);
-            setIsSpeaking(false);
-          }
-          console.log('Speech synthesis initiated successfully');
+          // Use Google Cloud TTS with fallback to browser TTS
+          await textToSpeechGoogle(responseContent).catch(err => {
+            console.error('Google TTS failed, falling back to browser TTS:', err);
+            fallbackBrowserTTS(responseContent);
+          });
         } catch (speechError) {
-          console.error('Text-to-speech error:', speechError);
+          console.error('All text-to-speech methods failed:', speechError);
           setIsSpeaking(false);
           toast({
             title: "Speech Synthesis Error",
-            description: "Unable to play audio response. Check your audio settings.",
-            variant: "destructive"
+            description: "Unable to play audio response. Tap the screen to try again.",
+            variant: "destructive",
+            duration: 5000
           });
         }
       }
@@ -203,11 +259,32 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
   
   // Cancel any ongoing speech
   const cancelSpeech = useCallback(() => {
+    // Stop Google TTS audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+    
+    // Also stop browser TTS if it's running
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      console.log('Speech synthesis canceled');
     }
+    
+    setIsSpeaking(false);
+    console.log('Speech synthesis canceled');
+  }, []);
+  
+  // Add function to enable audio playback on user interaction
+  // This is especially important for mobile browsers
+  const enableAudio = useCallback(() => {
+    const audio = audioRef.current;
+    audio.play().then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      console.log('Audio playback enabled');
+    }).catch(e => {
+      console.error('Failed to enable audio:', e);
+    });
   }, []);
   
   return {
@@ -217,6 +294,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
     error,
     sendMessage,
     clearMessages,
-    cancelSpeech
+    cancelSpeech,
+    enableAudio
   };
 };
