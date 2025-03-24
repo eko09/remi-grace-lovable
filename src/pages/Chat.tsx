@@ -17,7 +17,6 @@ const Chat: React.FC = () => {
     participantId,
     messages,
     isLoading,
-    isSpeaking,
     showSummary,
     setShowSummary,
     summaryContent,
@@ -73,12 +72,12 @@ const Chat: React.FC = () => {
         onChange={(e) => setMessageInput(e.target.value)}
         onKeyDown={handleKeyDown}
         className="flex-1 input-focus-ring h-11 sm:h-12 text-base font-lora"
-        disabled={isLoading || isSpeaking}
+        disabled={isLoading}
       />
       <Button 
         type="submit" 
         size="icon" 
-        disabled={!messageInput.trim() || isLoading || isSpeaking}
+        disabled={!messageInput.trim() || isLoading}
         className="h-11 w-11 sm:h-12 sm:w-12 btn-transition rounded-full bg-[#3399FF] hover:bg-[#2277DD]"
       >
         <Send className="h-5 w-5" />
@@ -94,7 +93,6 @@ const Chat: React.FC = () => {
       summaryContent={summaryContent}
       endConversation={endConversation}
       isLoading={isLoading}
-      isSpeaking={isSpeaking}
       footerContent={footerContent}
     >
       <MessageList

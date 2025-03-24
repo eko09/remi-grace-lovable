@@ -59,7 +59,9 @@ const VoiceChat: React.FC = () => {
   // Enable audio playback on mobile
   const enableAudioPlayback = () => {
     try {
-      enableAudio();
+      if (enableAudio) {
+        enableAudio();
+      }
       setAudioEnabled(true);
       console.log('Audio playback enabled');
     } catch (error) {
@@ -139,8 +141,7 @@ const VoiceChat: React.FC = () => {
           variant="outline"
           className="text-sm px-2 sm:px-4 h-8 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded-md"
         >
-          <span className="hidden sm:inline">End Conversation</span>
-          <span className="sm:hidden">End</span>
+          <span>End</span>
         </Button>
       </header>
       

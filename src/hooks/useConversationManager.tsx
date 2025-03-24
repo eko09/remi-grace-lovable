@@ -16,10 +16,10 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Setup initial message for Remi
+  // Setup initial message for Remi with new prompt
   const initialMessage: Message = {
     id: '0',
-    content: `Hello! I'm Remi, your reminiscence therapy companion. I'm here to help you explore your memories and experiences. How are you feeling today?`,
+    content: `Hello! I'm Remi, a therapist trained on reminiscence therapy, facilitating therapy sessions through conversation for older adults 65+. I'd like to start by confirming your participant ID, which consists of your initials followed by your age. What is your participant ID?`,
     role: 'assistant',
     timestamp: new Date()
   };

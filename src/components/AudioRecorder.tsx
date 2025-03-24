@@ -70,7 +70,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
               toast({
                 title: "Transcription Error",
                 description: "Could not convert your speech to text. Please try again and speak clearly.",
-                variant: "destructive"
+                variant: "default"
               });
             }
           } catch (error) {
@@ -78,7 +78,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
             toast({
               title: "Processing Error",
               description: "There was a problem processing your audio. Please try again.",
-              variant: "destructive"
+              variant: "default"
             });
           }
         } else {
@@ -102,7 +102,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       toast({
         title: "Microphone Access Error",
         description: "Please allow microphone access to use voice chat.",
-        variant: "destructive"
+        variant: "default"
       });
     }
   };

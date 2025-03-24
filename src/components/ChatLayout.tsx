@@ -3,7 +3,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -15,7 +14,7 @@ interface ChatLayoutProps {
   summaryContent: string;
   endConversation: () => void;
   isLoading: boolean;
-  isSpeaking: boolean;
+  isSpeaking?: boolean;
   children: React.ReactNode;
   footerContent: React.ReactNode;
 }
@@ -26,6 +25,7 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
   setShowSummary,
   summaryContent,
   endConversation,
+  isLoading,
   children,
   footerContent
 }) => {
@@ -59,12 +59,7 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
             onClick={endConversation}
             className="text-red-500 hover:bg-red-50 font-lora"
           >
-            {isMobile ? <X className="h-4 w-4" /> : (
-              <>
-                <X className="h-4 w-4 mr-2" />
-                End
-              </>
-            )}
+            End
           </Button>
         </div>
       </header>
