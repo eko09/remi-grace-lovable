@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           duration: number | null
           id: string
+          mode: string | null
           participant_id: string
           summary: string | null
           timestamp: string
@@ -22,6 +23,7 @@ export type Database = {
         Insert: {
           duration?: number | null
           id?: string
+          mode?: string | null
           participant_id: string
           summary?: string | null
           timestamp?: string
@@ -31,6 +33,7 @@ export type Database = {
         Update: {
           duration?: number | null
           id?: string
+          mode?: string | null
           participant_id?: string
           summary?: string | null
           timestamp?: string

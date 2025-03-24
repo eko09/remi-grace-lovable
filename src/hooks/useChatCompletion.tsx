@@ -16,6 +16,71 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
   useEffect(() => {
     initSpeechSynthesis();
     
+    // Configure voice settings
+    if ('speechSynthesis' in window) {
+      speechRef.current = new SpeechSynthesisUtterance();
+      
+      // Use a female voice with pleasant tone
+      const voices = window.speechSynthesis.getVoices();
+      // Try to find a female English voice
+      const preferredVoices = [
+        // Different systems have different voice names, try common ones
+        "Google US English Female", 
+        "Microsoft Zira Desktop",
+        "Female English Voice", 
+        "Samantha",
+        "Victoria"
+      ];
+      
+      // Function to set a voice when voices are available
+      const setVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        console.log("Available voices:", voices.map(v => v.name));
+        
+        // Find a preferred female voice
+        let selectedVoice = null;
+        for (const preferredVoice of preferredVoices) {
+          selectedVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes(preferredVoice.toLowerCase())
+          );
+          if (selectedVoice) break;
+        }
+        
+        // If no preferred voice found, try to find any female voice
+        if (!selectedVoice) {
+          selectedVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes('female') || 
+            voice.name.toLowerCase().includes('woman')
+          );
+        }
+        
+        // If still no voice, use the first English voice
+        if (!selectedVoice) {
+          selectedVoice = voices.find(voice => voice.lang.includes('en'));
+        }
+        
+        // Fall back to first voice if nothing else works
+        if (!selectedVoice && voices.length > 0) {
+          selectedVoice = voices[0];
+        }
+        
+        if (selectedVoice && speechRef.current) {
+          console.log("Selected voice:", selectedVoice.name);
+          speechRef.current.voice = selectedVoice;
+          speechRef.current.rate = 1.0; // Normal speaking rate
+          speechRef.current.pitch = 1.1; // Slightly higher pitch for a pleasant tone
+          speechRef.current.volume = 1.0;
+        }
+      };
+      
+      // Handle voice availability
+      if (voices.length > 0) {
+        setVoice();
+      } else {
+        window.speechSynthesis.onvoiceschanged = setVoice;
+      }
+    }
+    
     // Cleanup speech on unmount
     return () => {
       if ('speechSynthesis' in window) {
@@ -77,17 +142,42 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
         setIsSpeaking(true);
         
         try {
-          await textToSpeech(responseContent);
-          console.log('Speech synthesis completed successfully');
+          // Use our enhanced speech synthesis instead of the API call
+          if (speechRef.current && 'speechSynthesis' in window) {
+            speechRef.current.text = responseContent;
+            
+            // Set up event handlers
+            speechRef.current.onend = () => {
+              console.log('Speech synthesis completed naturally');
+              setIsSpeaking(false);
+            };
+            
+            speechRef.current.onerror = (event) => {
+              console.error('Speech synthesis error:', event);
+              setIsSpeaking(false);
+              toast({
+                title: "Speech Error",
+                description: "There was an error with the speech synthesis.",
+                variant: "destructive"
+              });
+            };
+            
+            // Start speaking
+            window.speechSynthesis.speak(speechRef.current);
+          } else {
+            // Fall back to the API-based method if speechSynthesis is not available
+            await textToSpeech(responseContent);
+            setIsSpeaking(false);
+          }
+          console.log('Speech synthesis initiated successfully');
         } catch (speechError) {
           console.error('Text-to-speech error:', speechError);
+          setIsSpeaking(false);
           toast({
             title: "Speech Synthesis Error",
             description: "Unable to play audio response. Check your audio settings.",
             variant: "destructive"
           });
-        } finally {
-          setIsSpeaking(false);
         }
       }
       
