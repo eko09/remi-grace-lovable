@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -32,7 +31,7 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     sendMessage, 
     cancelSpeech,
     enableAudio
-  } = useChatCompletion(initialMessages, mode === InputMode.VOICE);
+  } = useChatCompletion([initialMessage], mode === InputMode.VOICE);
   
   // Check for participant ID
   useEffect(() => {
@@ -121,6 +120,9 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     );
     
     setShowSummary(true);
+    
+    // After showing summary, redirect should be to home page
+    // This will take effect when the summary is closed
   };
 
   return {

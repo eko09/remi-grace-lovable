@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { InputMode } from '@/utils/types';
 import AudioRecorder from '@/components/AudioRecorder';
@@ -179,7 +178,7 @@ const VoiceChat: React.FC = () => {
               <button 
                 onClick={() => {
                   setShowSummary(false);
-                  window.location.href = '/';
+                  window.location.href = '/'; // Direct to home page instead of conversation mode
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -194,7 +193,7 @@ const VoiceChat: React.FC = () => {
               <button 
                 onClick={() => {
                   setShowSummary(false);
-                  window.location.href = '/';
+                  window.location.href = '/'; // Direct to home page
                 }}
                 className="px-4 py-2 bg-[#3399FF] hover:bg-[#2277DD] text-white rounded-md"
               >
