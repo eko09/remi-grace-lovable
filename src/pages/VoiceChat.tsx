@@ -162,7 +162,7 @@ const VoiceChat: React.FC = () => {
               <button 
                 onClick={() => {
                   setShowSummary(false);
-                  window.location.href = '/conversation-mode';
+                  window.location.href = '/';
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -177,7 +177,7 @@ const VoiceChat: React.FC = () => {
               <button 
                 onClick={() => {
                   setShowSummary(false);
-                  window.location.href = '/conversation-mode';
+                  window.location.href = '/';
                 }}
                 className="px-4 py-2 bg-[#3399FF] hover:bg-[#2277DD] text-white rounded-md"
               >

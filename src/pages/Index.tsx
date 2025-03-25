@@ -31,7 +31,35 @@ const Index: React.FC = () => {
                 Example: For Jane Smith born in 1945, the ID would be "JS45"
               </p>
             </div>
-            <ParticipantForm />
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const input = form.querySelector('input') as HTMLInputElement;
+              const participantId = input.value;
+              
+              if (participantId) {
+                // Store the ID in session storage
+                sessionStorage.setItem('participantId', participantId);
+                
+                // Navigate to conversation mode selection page
+                window.location.href = '/conversation-mode';
+              }
+            }} className="mt-4">
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Enter your participant ID"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <button 
+                type="submit"
+                className="w-full mt-4 bg-[#3399FF] hover:bg-[#2277DD] text-white py-2 rounded-md transition-colors"
+              >
+                Start Session
+              </button>
+            </form>
           </div>
           
           {/* Note about the app */}
