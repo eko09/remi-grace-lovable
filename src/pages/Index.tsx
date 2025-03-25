@@ -1,6 +1,5 @@
 
 import React from 'react';
-import ParticipantForm from '@/components/ParticipantForm';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Index: React.FC = () => {
@@ -22,15 +21,6 @@ const Index: React.FC = () => {
           </div>
           
           <div className="mb-8">
-            <div className="text-sm text-gray-600 mb-2">
-              <p>Please enter your participant ID to get started.</p>
-              <p className="mt-2 italic">
-                Your participant ID consists of your initials followed by the last two digits of your birth year.
-              </p>
-              <p className="text-gray-500 text-xs mt-2">
-                Example: For Jane Smith born in 1945, the ID would be "JS45"
-              </p>
-            </div>
             <form onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -52,6 +42,11 @@ const Index: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-2">
+                  Your participant ID consists of your initials followed by the last two digits of your birth year.
+                  <br /><br />
+                  Example: For Jane Smith born in 1945, the ID would be "JS45"
+                </p>
               </div>
               <button 
                 type="submit"
@@ -60,14 +55,6 @@ const Index: React.FC = () => {
                 Start Session
               </button>
             </form>
-          </div>
-          
-          {/* Note about the app */}
-          <div className="mt-6 text-sm text-gray-500 border-t border-gray-200 pt-4">
-            <p>
-              Remi helps older adults explore meaningful memories through guided conversation. 
-              All information is kept confidential and used only for research purposes.
-            </p>
           </div>
         </div>
       </div>

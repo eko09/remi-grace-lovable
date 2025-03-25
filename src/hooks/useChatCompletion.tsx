@@ -1,17 +1,41 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Message, InputMode } from '../utils/types';
 import { getChatCompletion } from '../utils/api';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-export const useChatCompletion = (initialMessages: Message[] = []) => {
+export const useChatCompletion = (initialMessages: Message[] = [], enableVoice: boolean = false) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const audioRef = useRef(new Audio());
+  const audioContext = useRef<AudioContext | null>(null);
+  
+  // Initialize audio context on mount for voice mode
+  useEffect(() => {
+    if (enableVoice) {
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContext) {
+          audioContext.current = new AudioContext();
+          console.log('Audio context initialized for voice mode');
+        }
+      } catch (e) {
+        console.warn('Failed to create audio context:', e);
+      }
+    }
+    
+    return () => {
+      // Clean up audio resources on unmount
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    };
+  }, [enableVoice]);
   
   // Send a message and get a response
   const sendMessage = useCallback(async (content: string, inputMode: InputMode = InputMode.TEXT, previousConversation?: string | null) => {
@@ -61,7 +85,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       setMessages(prev => [...prev, assistantMessage]);
       
       // For voice chat mode only - this won't execute in text chat mode
-      if (inputMode === InputMode.VOICE) {
+      if (inputMode === InputMode.VOICE && enableVoice) {
         console.log('Voice mode: Converting to speech:', responseContent);
         setIsSpeaking(true);
         
@@ -95,7 +119,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, toast]);
+  }, [messages, toast, enableVoice]);
   
   // Function to use Google Cloud TTS - only used in voice mode
   const textToSpeechGoogle = async (text: string): Promise<void> => {
@@ -105,7 +129,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       const { data, error } = await supabase.functions.invoke('google-tts', {
         body: { 
           text,
-          voice: 'en-US-Wavenet-F' // A natural sounding female voice
+          voice: 'echo' // Using OpenAI's echo voice - more natural sounding
         }
       });
       
@@ -129,6 +153,22 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
       try {
         await audio.load();
         audio.volume = 1.0; // Ensure volume is at maximum
+        
+        // Add event listeners to track playback
+        audio.onplay = () => {
+          console.log('Audio playback started');
+          setIsSpeaking(true);
+        };
+        
+        audio.onended = () => {
+          console.log('Audio playback ended');
+          setIsSpeaking(false);
+        };
+        
+        audio.onerror = (e) => {
+          console.error('Audio playback error:', e);
+          setIsSpeaking(false);
+        };
         
         console.log('Attempting to play audio...');
         const playPromise = audio.play();
@@ -183,14 +223,12 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
     
     // Create a short silent audio context and play it to enable audio on iOS
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContext) {
-        const audioCtx = new AudioContext();
-        const oscillator = audioCtx.createOscillator();
+      if (audioContext.current) {
+        const oscillator = audioContext.current.createOscillator();
         oscillator.frequency.value = 0; // Silent
-        oscillator.connect(audioCtx.destination);
+        oscillator.connect(audioContext.current.destination);
         oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.001);
+        oscillator.stop(audioContext.current.currentTime + 0.001);
         console.log('Created silent audio context to unlock audio');
       }
     } catch (e) {
@@ -211,7 +249,7 @@ export const useChatCompletion = (initialMessages: Message[] = []) => {
     }).catch(e => {
       console.error('Failed to enable audio with silent play:', e);
     });
-  }, [toast]);
+  }, []);
   
   return {
     messages,

@@ -24,7 +24,7 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     timestamp: new Date()
   };
   
-  // Get chat completion hook
+  // Get chat completion hook - only pass audio options for voice mode
   const { 
     messages, 
     isLoading, 
@@ -32,7 +32,7 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     sendMessage, 
     cancelSpeech,
     enableAudio
-  } = useChatCompletion([initialMessage]);
+  } = useChatCompletion(initialMessages, mode === InputMode.VOICE);
   
   // Check for participant ID
   useEffect(() => {
@@ -100,7 +100,9 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
 
   const endConversation = () => {
     // Cancel any ongoing speech
-    cancelSpeech();
+    if (mode === InputMode.VOICE) {
+      cancelSpeech();
+    }
     
     // Generate summary from messages
     const summary = generateSessionSummary(messages);

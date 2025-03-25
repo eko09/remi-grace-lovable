@@ -29,6 +29,23 @@ const VoiceChat: React.FC = () => {
     enableAudio
   } = useConversationManager(InputMode.VOICE);
   
+  // Auto-enable audio when component loads
+  useEffect(() => {
+    const initAudio = async () => {
+      try {
+        if (enableAudio) {
+          await enableAudio();
+          setAudioEnabled(true);
+          console.log('Audio automatically enabled on component mount');
+        }
+      } catch (err) {
+        console.error('Failed to auto-enable audio:', err);
+      }
+    };
+    
+    initAudio();
+  }, [enableAudio]);
+  
   // Fetch previous conversation for RAG
   useEffect(() => {
     const loadPreviousConversation = async () => {
@@ -57,10 +74,10 @@ const VoiceChat: React.FC = () => {
   };
   
   // Enable audio playback on mobile
-  const enableAudioPlayback = () => {
+  const enableAudioPlayback = async () => {
     try {
       if (enableAudio) {
-        enableAudio();
+        await enableAudio();
       }
       setAudioEnabled(true);
       console.log('Audio playback enabled');
