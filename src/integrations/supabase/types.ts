@@ -50,6 +50,54 @@ export type Database = {
           },
         ]
       }
+      mood_assessments: {
+        Row: {
+          assessment_type: string
+          created_at: string
+          emoji: string | null
+          id: string
+          mood_label: string | null
+          mood_rating: number
+          participant_id: string
+          session_id: string | null
+        }
+        Insert: {
+          assessment_type: string
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          mood_label?: string | null
+          mood_rating: number
+          participant_id: string
+          session_id?: string | null
+        }
+        Update: {
+          assessment_type?: string
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          mood_label?: string | null
+          mood_rating?: number
+          participant_id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mood_assessments_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "mood_assessments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participants: {
         Row: {
           created_at: string

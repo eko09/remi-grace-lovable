@@ -9,10 +9,12 @@ import { useChatCompletion } from '@/hooks/useChatCompletion';
 export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [showPostMood, setShowPostMood] = useState(false);
   const [summaryContent, setSummaryContent] = useState<string>('');
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [messageCount, setMessageCount] = useState<number>(0);
   const [sessionCount, setSessionCount] = useState<number>(0);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -56,7 +58,7 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     }
   }, [navigate]);
 
-  const endConversation = () => {
+  const endConversation = async () => {
     // Cancel any ongoing speech
     if (mode === InputMode.VOICE) {
       cancelSpeech();
@@ -71,25 +73,41 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
     
     // Save to database
-    saveConversation(
-      participantId,
-      summary.replace(/<[^>]*>?/gm, ''), // Strip HTML tags for database storage
-      transcript,
-      duration,
-      messageCount,
-      mode
-    ).catch(error => {
+    try {
+      const { data, error } = await saveConversation(
+        participantId,
+        summary.replace(/<[^>]*>?/gm, ''), // Strip HTML tags for database storage
+        transcript,
+        duration,
+        messageCount,
+        mode
+      );
+      
+      if (error) throw error;
+      
+      // Store the session ID for the post-mood assessment
+      if (data && data.id) {
+        setCurrentSessionId(data.id);
+      }
+      
+      // Show post-session mood assessment first
+      setShowPostMood(true);
+    } catch (error) {
+      console.error('Error saving conversation:', error);
       toast({
         title: "Error saving conversation",
         description: "There was a problem saving your conversation. Please try again.",
         variant: "destructive"
       });
-    });
-    
+      
+      // If error, still show summary
+      setShowSummary(true);
+    }
+  };
+  
+  const handlePostMoodComplete = () => {
+    setShowPostMood(false);
     setShowSummary(true);
-    
-    // After showing summary, redirect should be to home page
-    // This will take effect when the summary is closed
   };
 
   return {
@@ -99,13 +117,17 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     isSpeaking,
     showSummary,
     setShowSummary,
+    showPostMood,
+    setShowPostMood,
     summaryContent,
     messageCount,
     setMessageCount,
     sessionCount,
+    currentSessionId,
     sendMessage,
     endConversation,
     fetchPreviousConversation,
     enableAudio,
+    handlePostMoodComplete
   };
 };

@@ -1,4 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { InputMode } from '@/utils/types';
 import AudioRecorder from '@/components/AudioRecorder';
 import { useConversationManager } from '@/hooks/useConversationManager';
@@ -6,11 +8,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import MoodSlider from "@/components/MoodSlider";
 
 const VoiceChat: React.FC = () => {
   const [previousConversation, setPreviousConversation] = useState<string | null>(null);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const {
     participantId,
@@ -19,13 +24,17 @@ const VoiceChat: React.FC = () => {
     isSpeaking,
     showSummary,
     setShowSummary,
+    showPostMood,
+    setShowPostMood,
     summaryContent,
     messageCount,
     setMessageCount,
+    currentSessionId,
     sendMessage,
     endConversation,
     fetchPreviousConversation,
-    enableAudio
+    enableAudio,
+    handlePostMoodComplete
   } = useConversationManager(InputMode.VOICE);
   
   // Auto-enable audio when component loads
@@ -88,6 +97,11 @@ const VoiceChat: React.FC = () => {
         duration: 5000,
       });
     }
+  };
+  
+  const closeSummary = () => {
+    setShowSummary(false);
+    navigate('/');
   };
   
   // The voice chat UI is simpler - just show Remi's avatar and the audio recorder
@@ -169,40 +183,44 @@ const VoiceChat: React.FC = () => {
         {footerContent}
       </div>
 
-      {/* Session Summary Dialog */}
-      {showSummary && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-medium font-playfair">Conversation Summary</h2>
-              <button 
-                onClick={() => {
-                  setShowSummary(false);
-                  window.location.href = '/'; // Direct to home page instead of conversation mode
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-            <div dangerouslySetInnerHTML={{ __html: summaryContent }} />
-            <div className="flex justify-center mt-6">
-              <button 
-                onClick={() => {
-                  setShowSummary(false);
-                  window.location.href = '/'; // Direct to home page
-                }}
-                className="px-4 py-2 bg-[#3399FF] hover:bg-[#2277DD] text-white rounded-md"
-              >
-                Return to Home
-              </button>
-            </div>
+      {/* Post-Session Mood Assessment Dialog */}
+      <Dialog open={showPostMood} onOpenChange={setShowPostMood}>
+        <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-playfair">How are you feeling now?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {participantId && (
+              <MoodSlider
+                participantId={participantId}
+                sessionId={currentSessionId || undefined}
+                assessmentType="post"
+                onComplete={handlePostMoodComplete}
+                title="After your session..."
+                subtitle="How are you feeling right now?"
+              />
+            )}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Session Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-playfair">Session Complete</DialogTitle>
+          </DialogHeader>
+          <div className="py-4" dangerouslySetInnerHTML={{ __html: summaryContent }} />
+          <div className="flex justify-center mt-4">
+            <Button 
+              onClick={closeSummary}
+              className="w-full sm:w-auto bg-[#3399FF] hover:bg-[#2277DD]"
+            >
+              Return to Home
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

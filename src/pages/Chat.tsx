@@ -19,12 +19,16 @@ const Chat: React.FC = () => {
     isLoading,
     showSummary,
     setShowSummary,
+    showPostMood,
+    setShowPostMood,
     summaryContent,
     messageCount,
     setMessageCount,
+    currentSessionId,
     sendMessage,
     endConversation,
     fetchPreviousConversation,
+    handlePostMoodComplete
   } = useConversationManager(InputMode.TEXT);
   
   // Fetch previous conversation for context when component mounts
@@ -90,10 +94,14 @@ const Chat: React.FC = () => {
       participantId={participantId}
       showSummary={showSummary}
       setShowSummary={setShowSummary}
+      showPostMood={showPostMood}
+      setShowPostMood={setShowPostMood}
       summaryContent={summaryContent}
       endConversation={endConversation}
       isLoading={isLoading}
       footerContent={footerContent}
+      currentSessionId={currentSessionId}
+      onPostMoodComplete={handlePostMoodComplete}
     >
       <MessageList
         messages={messages}

@@ -6,28 +6,37 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import MoodSlider from "@/components/MoodSlider";
 
 interface ChatLayoutProps {
   participantId: string | null;
   showSummary: boolean;
   setShowSummary: (show: boolean) => void;
+  showPostMood: boolean;
+  setShowPostMood: (show: boolean) => void;
   summaryContent: string;
   endConversation: () => void;
   isLoading: boolean;
   isSpeaking?: boolean;
   children: React.ReactNode;
   footerContent: React.ReactNode;
+  currentSessionId?: string | null;
+  onPostMoodComplete: () => void;
 }
 
 const ChatLayout: React.FC<ChatLayoutProps> = ({
   participantId,
   showSummary,
   setShowSummary,
+  showPostMood,
+  setShowPostMood,
   summaryContent,
   endConversation,
   isLoading,
   children,
-  footerContent
+  footerContent,
+  currentSessionId,
+  onPostMoodComplete
 }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -86,6 +95,30 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
           </CardFooter>
         </Card>
       </main>
+
+      {/* Post-Session Mood Assessment Dialog */}
+      <Dialog open={showPostMood} onOpenChange={setShowPostMood}>
+        <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-playfair">How are you feeling now?</DialogTitle>
+            <DialogDescription className="text-therapy-text">
+              Before we finish, please let us know how you're feeling after this session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {participantId && (
+              <MoodSlider
+                participantId={participantId}
+                sessionId={currentSessionId || undefined}
+                assessmentType="post"
+                onComplete={onPostMoodComplete}
+                title="After your session..."
+                subtitle="How are you feeling right now?"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Session Summary Dialog */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>

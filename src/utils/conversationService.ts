@@ -32,6 +32,7 @@ export async function fetchPreviousConversation(participantId: string): Promise<
  * @param duration - The duration of the conversation in seconds
  * @param turns - The number of message exchanges in the conversation
  * @param mode - The mode of the conversation (text/voice)
+ * @returns An object containing the data (including the session ID) and any error
  */
 export async function saveConversation(
   participantId: string | null, 
@@ -40,10 +41,10 @@ export async function saveConversation(
   duration: number, 
   turns: number,
   mode: string
-): Promise<void> {
+) {
   if (!participantId) {
     console.error('Cannot save conversation: Missing participant ID');
-    return;
+    return { data: null, error: new Error('Missing participant ID') };
   }
 
   try {
@@ -55,7 +56,7 @@ export async function saveConversation(
     if (participantError) throw participantError;
     
     // Then save the conversation with the mode
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .insert([{
         participant_id: participantId,
@@ -65,13 +66,16 @@ export async function saveConversation(
         turns,
         timestamp: new Date().toISOString(),
         mode
-      }]);
+      }])
+      .select('id')
+      .single();
     
     if (error) throw error;
-    console.log('Conversation saved successfully');
+    console.log('Conversation saved successfully with ID:', data?.id);
+    return { data, error: null };
   } catch (error) {
     console.error('Error saving conversation:', error);
-    throw error;
+    return { data: null, error };
   }
 }
 
