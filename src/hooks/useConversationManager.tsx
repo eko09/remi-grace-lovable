@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { InputMode, Message } from '@/utils/types';
 import { generateSessionSummary, getSessionCount, saveConversation, fetchPreviousConversation } from '@/utils/api';
 import { useChatCompletion } from '@/hooks/useChatCompletion';
+import { supabase } from "@/integrations/supabase/client";
 
 export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   const [participantId, setParticipantId] = useState<string | null>(null);
@@ -18,7 +18,6 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Setup initial message for Remi with new prompt
   const initialMessage: Message = {
     id: '0',
     content: `Hello! I'm Remi, a therapist trained on reminiscence therapy, facilitating therapy sessions through conversation for older adults 65+. I'd like to start by confirming your participant ID, which consists of your initials followed by your age. What is your participant ID?`,
@@ -26,7 +25,6 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     timestamp: new Date()
   };
   
-  // Get chat completion hook - only pass audio options for voice mode
   const { 
     messages, 
     isLoading, 
@@ -36,7 +34,6 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     enableAudio
   } = useChatCompletion([initialMessage], mode === InputMode.VOICE);
   
-  // Check for participant ID
   useEffect(() => {
     const storedId = sessionStorage.getItem('participantId');
     if (!storedId) {
@@ -45,9 +42,28 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
       setParticipantId(storedId);
       setStartTime(new Date());
       
-      // Get session count for this participant
       const getSessionInfo = async () => {
         if (storedId) {
+          try {
+            const { data, error } = await supabase
+              .from('participants')
+              .select('participant_id')
+              .eq('participant_id', storedId)
+              .single();
+            
+            if (error || !data) {
+              const { error: insertError } = await supabase
+                .from('participants')
+                .insert({ participant_id: storedId });
+              
+              if (insertError) {
+                console.error('Error creating participant:', insertError);
+              }
+            }
+          } catch (err) {
+            console.error('Error checking participant:', err);
+          }
+          
           const count = await getSessionCount(storedId);
           setSessionCount(count);
           console.log(`Session count for ${storedId}: ${count}`);
@@ -59,24 +75,34 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   }, [navigate]);
 
   const endConversation = async () => {
-    // Cancel any ongoing speech
     if (mode === InputMode.VOICE) {
       cancelSpeech();
     }
     
-    // Generate summary from messages
     const summary = generateSessionSummary(messages);
     setSummaryContent(summary);
     
-    // Calculate duration and prepare transcript
     const duration = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
     const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
     
-    // Save to database
     try {
+      if (participantId) {
+        const { data: participantData, error: participantError } = await supabase
+          .from('participants')
+          .select('participant_id')
+          .eq('participant_id', participantId)
+          .single();
+        
+        if (participantError || !participantData) {
+          await supabase
+            .from('participants')
+            .insert({ participant_id: participantId });
+        }
+      }
+      
       const { data, error } = await saveConversation(
         participantId,
-        summary.replace(/<[^>]*>?/gm, ''), // Strip HTML tags for database storage
+        summary.replace(/<[^>]*>?/gm, ''),
         transcript,
         duration,
         messageCount,
@@ -85,12 +111,10 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
       
       if (error) throw error;
       
-      // Store the session ID for the post-mood assessment
       if (data && data.id) {
         setCurrentSessionId(data.id);
       }
       
-      // Show post-session mood assessment first
       setShowPostMood(true);
     } catch (error) {
       console.error('Error saving conversation:', error);
@@ -100,7 +124,6 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
         variant: "destructive"
       });
       
-      // If error, still show summary
       setShowSummary(true);
     }
   };
