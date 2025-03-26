@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { InputMode, Message } from '@/utils/types';
-import { generateSessionSummary } from '@/utils/api';
+import { generateSessionSummary, getSessionCount } from '@/utils/api';
 import { useChatCompletion } from '@/hooks/useChatCompletion';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,6 +13,7 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   const [summaryContent, setSummaryContent] = useState<string>('');
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [messageCount, setMessageCount] = useState<number>(0);
+  const [sessionCount, setSessionCount] = useState<number>(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -41,6 +43,17 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     } else {
       setParticipantId(storedId);
       setStartTime(new Date());
+      
+      // Get session count for this participant
+      const getSessionInfo = async () => {
+        if (storedId) {
+          const count = await getSessionCount(storedId);
+          setSessionCount(count);
+          console.log(`Session count for ${storedId}: ${count}`);
+        }
+      };
+      
+      getSessionInfo();
     }
   }, [navigate]);
 
@@ -135,6 +148,7 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     summaryContent,
     messageCount,
     setMessageCount,
+    sessionCount,
     sendMessage,
     endConversation,
     fetchPreviousConversation,
