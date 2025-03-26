@@ -3,9 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { InputMode, Message } from '@/utils/types';
-import { generateSessionSummary, getSessionCount } from '@/utils/api';
+import { generateSessionSummary, getSessionCount, saveConversation, fetchPreviousConversation } from '@/utils/api';
 import { useChatCompletion } from '@/hooks/useChatCompletion';
-import { supabase } from "@/integrations/supabase/client";
 
 export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
   const [participantId, setParticipantId] = useState<string | null>(null);
@@ -57,59 +56,6 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     }
   }, [navigate]);
 
-  // Function to fetch previous conversation
-  const fetchPreviousConversation = async (participantId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('transcript')
-        .eq('participant_id', participantId)
-        .order('timestamp', { ascending: false })
-        .limit(1);
-      
-      if (error) throw error;
-      
-      return data.length > 0 ? data[0].transcript : null;
-    } catch (error) {
-      console.error('Error fetching previous conversation:', error);
-      return null;
-    }
-  };
-
-  const saveConversationToDatabase = async (summary: string, transcript: string, duration: number, turns: number) => {
-    try {
-      // First, ensure participant exists in the database
-      const { error: participantError } = await supabase
-        .from('participants')
-        .upsert([{ participant_id: participantId }], { onConflict: 'participant_id' });
-      
-      if (participantError) throw participantError;
-      
-      // Then save the conversation with the mode
-      const { error } = await supabase
-        .from('conversations')
-        .insert([{
-          participant_id: participantId,
-          summary,
-          transcript,
-          duration,
-          turns,
-          timestamp: new Date().toISOString(),
-          mode: mode // Store the conversation mode
-        }]);
-      
-      if (error) throw error;
-      console.log('Conversation saved successfully');
-    } catch (error) {
-      console.error('Error saving conversation:', error);
-      toast({
-        title: "Error saving conversation",
-        description: "There was a problem saving your conversation. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const endConversation = () => {
     // Cancel any ongoing speech
     if (mode === InputMode.VOICE) {
@@ -125,12 +71,20 @@ export const useConversationManager = (mode: InputMode = InputMode.TEXT) => {
     const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
     
     // Save to database
-    saveConversationToDatabase(
+    saveConversation(
+      participantId,
       summary.replace(/<[^>]*>?/gm, ''), // Strip HTML tags for database storage
       transcript,
       duration,
-      messageCount
-    );
+      messageCount,
+      mode
+    ).catch(error => {
+      toast({
+        title: "Error saving conversation",
+        description: "There was a problem saving your conversation. Please try again.",
+        variant: "destructive"
+      });
+    });
     
     setShowSummary(true);
     
