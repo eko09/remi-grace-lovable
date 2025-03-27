@@ -179,7 +179,7 @@ const VoiceChat: React.FC = () => {
       <Dialog open={showPostMood} onOpenChange={setShowPostMood}>
         <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
           <DialogHeader>
-            <DialogTitle className="text-xl font-playfair">How are you feeling now?</DialogTitle>
+            <DialogTitle className="text-xl font-playfair">Please let us know how you're feeling after the session</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             {participantId && (
@@ -189,7 +189,7 @@ const VoiceChat: React.FC = () => {
                 assessmentType="post"
                 onComplete={handlePostMoodComplete}
                 title=""
-                subtitle="How are you feeling right now?"
+                subtitle=""
               />
             )}
           </div>

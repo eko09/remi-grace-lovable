@@ -99,7 +99,7 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
       <Dialog open={showPostMood} onOpenChange={setShowPostMood}>
         <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
           <DialogHeader>
-            <DialogTitle className="text-xl font-playfair">How are you feeling now?</DialogTitle>
+            <DialogTitle className="text-xl font-playfair">Please let us know how you're feeling after the session</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             {participantId && (

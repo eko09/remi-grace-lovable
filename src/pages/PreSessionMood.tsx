@@ -57,7 +57,7 @@ const PreSessionMood: React.FC = () => {
           participantId={participantId}
           assessmentType="pre"
           onComplete={handleComplete}
-          title="How are you feeling right now?"
+          title="Please let us know how you're feeling before the session"
           subtitle=""
         />
       )}
