@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InputMode } from '@/utils/types';
@@ -37,7 +36,6 @@ const VoiceChat: React.FC = () => {
     handlePostMoodComplete
   } = useConversationManager(InputMode.VOICE);
   
-  // Auto-enable audio when component loads
   useEffect(() => {
     const initAudio = async () => {
       try {
@@ -54,7 +52,6 @@ const VoiceChat: React.FC = () => {
     initAudio();
   }, [enableAudio]);
   
-  // Fetch previous conversation for RAG
   useEffect(() => {
     const loadPreviousConversation = async () => {
       if (participantId) {
@@ -67,7 +64,6 @@ const VoiceChat: React.FC = () => {
     loadPreviousConversation();
   }, [participantId, fetchPreviousConversation]);
   
-  // Handler for when audio is recorded
   const handleAudioRecorded = async (transcript: string) => {
     if (transcript && !isLoading) {
       console.log('Voice transcript:', transcript);
@@ -81,7 +77,6 @@ const VoiceChat: React.FC = () => {
     }
   };
   
-  // Enable audio playback on mobile
   const enableAudioPlayback = async () => {
     try {
       if (enableAudio) {
@@ -104,7 +99,6 @@ const VoiceChat: React.FC = () => {
     navigate('/');
   };
   
-  // The voice chat UI is simpler - just show Remi's avatar and the audio recorder
   const footerContent = (
     <div className="flex flex-col items-center w-full space-y-4">
       <AudioRecorder 
@@ -114,7 +108,6 @@ const VoiceChat: React.FC = () => {
     </div>
   );
   
-  // For voice chat, we'll render a simplified UI with Remi's avatar in the center
   const voiceChatContent = (
     <div className="flex flex-col items-center justify-center flex-1 py-10">
       <div className="mb-6 relative" onClick={enableAudioPlayback}>
@@ -183,7 +176,6 @@ const VoiceChat: React.FC = () => {
         {footerContent}
       </div>
 
-      {/* Post-Session Mood Assessment Dialog */}
       <Dialog open={showPostMood} onOpenChange={setShowPostMood}>
         <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
           <DialogHeader>
@@ -196,7 +188,7 @@ const VoiceChat: React.FC = () => {
                 sessionId={currentSessionId || undefined}
                 assessmentType="post"
                 onComplete={handlePostMoodComplete}
-                title="After your session..."
+                title=""
                 subtitle="How are you feeling right now?"
               />
             )}
@@ -204,7 +196,6 @@ const VoiceChat: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Session Summary Dialog */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
         <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
           <DialogHeader>

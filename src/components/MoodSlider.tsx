@@ -126,7 +126,7 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-xl font-playfair">{title}</CardTitle>
-        <p className="text-muted-foreground">{subtitle}</p>
+        {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="text-center text-6xl mb-4">

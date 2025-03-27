@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -101,9 +100,6 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
         <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
           <DialogHeader>
             <DialogTitle className="text-xl font-playfair">How are you feeling now?</DialogTitle>
-            <DialogDescription className="text-therapy-text">
-              Before we finish, please let us know how you're feeling after this session.
-            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {participantId && (
@@ -112,8 +108,8 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
                 sessionId={currentSessionId || undefined}
                 assessmentType="post"
                 onComplete={onPostMoodComplete}
-                title="After your session..."
-                subtitle="How are you feeling right now?"
+                title=""
+                subtitle=""
               />
             )}
           </div>
@@ -125,9 +121,6 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
         <DialogContent className="w-[calc(100%-32px)] sm:max-w-md font-lora bg-therapy-beige-light">
           <DialogHeader>
             <DialogTitle className="text-xl font-playfair">Session Complete</DialogTitle>
-            <DialogDescription className="text-therapy-text">
-              Thank you for your session with Remi today.
-            </DialogDescription>
           </DialogHeader>
           <div className="py-4" dangerouslySetInnerHTML={{ __html: summaryContent }} />
           <div className="flex justify-center mt-4">
