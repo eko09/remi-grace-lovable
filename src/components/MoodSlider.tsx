@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -130,7 +129,7 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
             </div>
             <div className="text-center mt-4">
               <p className="text-lg font-medium">
-                Your mood: {getMoodLabel(moodRating)} ({moodRating}/100)
+                {getMoodLabel(moodRating)}
               </p>
             </div>
           </div>
@@ -139,7 +138,7 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
         {/* Trust Slider */}
         <div>
           <div className="text-center mb-4">
-            <p className="text-lg font-medium">I trust AI Therapy</p>
+            <p className="text-lg font-medium">I am confident in AI Therapy. I feel that it will work well.</p>
           </div>
           <div className="space-y-4">
             <Slider
@@ -155,18 +154,13 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
               <span>Neutral</span>
               <span>Strongly Agree</span>
             </div>
-            <div className="text-center mt-4">
-              <p className="text-lg font-medium">
-                Trust level: {getTrustLabel(trustRating)}
-              </p>
-            </div>
           </div>
         </div>
 
         {/* Attitude Slider */}
         <div>
           <div className="text-center mb-4">
-            <p className="text-lg font-medium">AI Therapy's impact on emotional well-being</p>
+            <p className="text-lg font-medium">All things considered, I think using AI Therapy for emotional well-being is:</p>
           </div>
           <div className="space-y-4">
             <Slider
@@ -181,11 +175,6 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
               <span>Harmful</span>
               <span>Neutral</span>
               <span>Beneficial</span>
-            </div>
-            <div className="text-center mt-4">
-              <p className="text-lg font-medium">
-                Perceived impact: {getAttitudeLabel(attitudeRating)}
-              </p>
             </div>
           </div>
         </div>
