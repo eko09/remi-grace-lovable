@@ -129,7 +129,7 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
             </div>
             <div className="text-center mt-4">
               <p className="text-lg font-medium">
-                {getMoodLabel(moodRating)}
+                {getMoodLabel(moodRating)} ({moodRating}%)
               </p>
             </div>
           </div>
