@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -65,20 +66,42 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
     
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('mood_assessments')
-        .insert({
-          participant_id: participantId,
-          session_id: sessionId,
-          mood_rating: moodRating,
-          assessment_type: assessmentType,
-          emoji: getMoodEmoji(moodRating),
-          mood_label: getMoodLabel(moodRating),
+      // Create a base record with required fields
+      const moodData = {
+        participant_id: participantId,
+        session_id: sessionId,
+        mood_rating: moodRating,
+        assessment_type: assessmentType,
+        emoji: getMoodEmoji(moodRating),
+        mood_label: getMoodLabel(moodRating)
+      };
+      
+      // Only attempt to save the trust and attitude ratings if the columns exist
+      try {
+        await supabase.from('mood_assessments').select('trust_rating').limit(1);
+        // If we got here, the column exists
+        Object.assign(moodData, {
           trust_rating: trustRating,
-          trust_label: getTrustLabel(trustRating),
+          trust_label: getTrustLabel(trustRating)
+        });
+      } catch (err) {
+        console.log('Trust rating columns may not exist yet:', err);
+      }
+      
+      try {
+        await supabase.from('mood_assessments').select('attitude_rating').limit(1);
+        // If we got here, the column exists
+        Object.assign(moodData, {
           attitude_rating: attitudeRating,
           attitude_label: getAttitudeLabel(attitudeRating)
         });
+      } catch (err) {
+        console.log('Attitude rating columns may not exist yet:', err);
+      }
+      
+      const { error } = await supabase
+        .from('mood_assessments')
+        .insert(moodData);
       
       if (error) throw error;
       
