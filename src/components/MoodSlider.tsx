@@ -24,6 +24,8 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
   subtitle = "Slide the bar to indicate your current mood"
 }) => {
   const [moodRating, setMoodRating] = useState<number>(50);
+  const [trustRating, setTrustRating] = useState<number>(50);
+  const [attitudeRating, setAttitudeRating] = useState<number>(50);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -35,6 +37,22 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
     return "Excellent";
   };
 
+  const getTrustLabel = (value: number): string => {
+    if (value < 20) return "Strongly Disagree";
+    if (value < 40) return "Disagree";
+    if (value < 60) return "Neutral";
+    if (value < 80) return "Agree";
+    return "Strongly Agree";
+  };
+
+  const getAttitudeLabel = (value: number): string => {
+    if (value < 20) return "Harmful";
+    if (value < 40) return "Somewhat Harmful";
+    if (value < 60) return "Neutral";
+    if (value < 80) return "Somewhat Beneficial";
+    return "Beneficial";
+  };
+
   const getMoodEmoji = (value: number): string => {
     if (value < 20) return "😢";
     if (value < 40) return "😕";
@@ -43,53 +61,11 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
     return "😄";
   };
 
-  const ensureParticipantExists = async () => {
-    try {
-      // Check if participant exists
-      const { data, error } = await supabase
-        .from('participants')
-        .select('participant_id')
-        .eq('participant_id', participantId)
-        .single();
-      
-      // If participant doesn't exist, create it
-      if (error || !data) {
-        const { error: insertError } = await supabase
-          .from('participants')
-          .insert({ participant_id: participantId });
-        
-        if (insertError) {
-          console.error('Error creating participant:', insertError);
-          return false;
-        }
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error ensuring participant exists:', error);
-      return false;
-    }
-  };
-
   const handleSaveMood = async () => {
     if (!participantId) return;
     
     setSaving(true);
     try {
-      // First ensure the participant exists
-      const participantExists = await ensureParticipantExists();
-      
-      if (!participantExists) {
-        toast({
-          title: "Error",
-          description: "Failed to save mood. Please try again.",
-          variant: "destructive"
-        });
-        setSaving(false);
-        return;
-      }
-      
-      // Then save the mood assessment
       const { error } = await supabase
         .from('mood_assessments')
         .insert({
@@ -98,14 +74,18 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
           mood_rating: moodRating,
           assessment_type: assessmentType,
           emoji: getMoodEmoji(moodRating),
-          mood_label: getMoodLabel(moodRating)
+          mood_label: getMoodLabel(moodRating),
+          trust_rating: trustRating,
+          trust_label: getTrustLabel(trustRating),
+          attitude_rating: attitudeRating,
+          attitude_label: getAttitudeLabel(attitudeRating)
         });
       
       if (error) throw error;
       
       toast({
         title: "Success",
-        description: "Your mood has been recorded.",
+        description: "Your mood assessment has been recorded.",
         variant: "default"
       });
       
@@ -129,27 +109,84 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
         {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="text-center text-6xl mb-4">
-          {getMoodEmoji(moodRating)}
-        </div>
-        <div className="space-y-4">
-          <Slider
-            value={[moodRating]}
-            min={0}
-            max={100}
-            step={1}
-            onValueChange={(values) => setMoodRating(values[0])}
-            className="my-4"
-          />
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Very Low</span>
-            <span>Neutral</span>
-            <span>Excellent</span>
+        {/* Mood Slider */}
+        <div>
+          <div className="text-center text-6xl mb-4">
+            {getMoodEmoji(moodRating)}
           </div>
-          <div className="text-center mt-4">
-            <p className="text-lg font-medium">
-              Your mood: {getMoodLabel(moodRating)} ({moodRating}/100)
-            </p>
+          <div className="space-y-4">
+            <Slider
+              value={[moodRating]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(values) => setMoodRating(values[0])}
+              className="my-4"
+            />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Very Low</span>
+              <span>Neutral</span>
+              <span>Excellent</span>
+            </div>
+            <div className="text-center mt-4">
+              <p className="text-lg font-medium">
+                Your mood: {getMoodLabel(moodRating)} ({moodRating}/100)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust Slider */}
+        <div>
+          <div className="text-center mb-4">
+            <p className="text-lg font-medium">I trust AI Therapy</p>
+          </div>
+          <div className="space-y-4">
+            <Slider
+              value={[trustRating]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(values) => setTrustRating(values[0])}
+              className="my-4"
+            />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Strongly Disagree</span>
+              <span>Neutral</span>
+              <span>Strongly Agree</span>
+            </div>
+            <div className="text-center mt-4">
+              <p className="text-lg font-medium">
+                Trust level: {getTrustLabel(trustRating)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Attitude Slider */}
+        <div>
+          <div className="text-center mb-4">
+            <p className="text-lg font-medium">AI Therapy's impact on emotional well-being</p>
+          </div>
+          <div className="space-y-4">
+            <Slider
+              value={[attitudeRating]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(values) => setAttitudeRating(values[0])}
+              className="my-4"
+            />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Harmful</span>
+              <span>Neutral</span>
+              <span>Beneficial</span>
+            </div>
+            <div className="text-center mt-4">
+              <p className="text-lg font-medium">
+                Perceived impact: {getAttitudeLabel(attitudeRating)}
+              </p>
+            </div>
           </div>
         </div>
       </CardContent>
