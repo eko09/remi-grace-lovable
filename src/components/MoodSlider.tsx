@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -46,11 +45,8 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
   };
 
   const getAttitudeLabel = (value: number): string => {
-    if (value < 20) return "Harmful";
-    if (value < 40) return "Somewhat Harmful";
-    if (value < 60) return "Neutral";
-    if (value < 80) return "Somewhat Beneficial";
-    return "Beneficial";
+    const stars = Math.round((value / 100) * 6) + 1;
+    return `${stars} ★ (${value}%)`;
   };
 
   const getMoodEmoji = (value: number): string => {
@@ -66,7 +62,6 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
     
     setSaving(true);
     try {
-      // Create a base record with required fields
       const moodData = {
         participant_id: participantId,
         session_id: sessionId,
@@ -76,10 +71,8 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
         mood_label: getMoodLabel(moodRating)
       };
       
-      // Only attempt to save the trust and attitude ratings if the columns exist
       try {
         await supabase.from('mood_assessments').select('trust_rating').limit(1);
-        // If we got here, the column exists
         Object.assign(moodData, {
           trust_rating: trustRating,
           trust_label: getTrustLabel(trustRating)
@@ -90,7 +83,6 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
       
       try {
         await supabase.from('mood_assessments').select('attitude_rating').limit(1);
-        // If we got here, the column exists
         Object.assign(moodData, {
           attitude_rating: attitudeRating,
           attitude_label: getAttitudeLabel(attitudeRating)
@@ -131,7 +123,6 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
         {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Mood Slider */}
         <div>
           <div className="text-center text-6xl mb-4">
             {getMoodEmoji(moodRating)}
@@ -158,7 +149,6 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
           </div>
         </div>
 
-        {/* Trust Slider */}
         <div>
           <div className="text-center mb-4">
             <p className="text-lg font-medium">I am confident in AI Therapy. I feel that it will work well.</p>
@@ -180,7 +170,6 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
           </div>
         </div>
 
-        {/* Attitude Slider */}
         <div>
           <div className="text-center mb-4">
             <p className="text-lg font-medium">All things considered, I think using AI Therapy for emotional well-being is:</p>
@@ -196,8 +185,10 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
             />
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Harmful</span>
-              <span>Neutral</span>
               <span>Beneficial</span>
+            </div>
+            <div className="text-center mt-2">
+              <p className="text-lg font-medium">{getAttitudeLabel(attitudeRating)}</p>
             </div>
           </div>
         </div>
