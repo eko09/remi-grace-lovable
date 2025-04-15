@@ -4,6 +4,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import StarRating from './StarRating';
 
 interface MoodSliderProps {
   participantId: string;
@@ -44,9 +45,8 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
     return "Strongly Agree";
   };
 
-  const getAttitudeLabel = (value: number): string => {
-    const stars = Math.round((value / 100) * 6) + 1;
-    return `${stars} ★ (${value}%)`;
+  const getAttitudeLabel = (stars: number): string => {
+    return `${stars} ★`;
   };
 
   const getMoodEmoji = (value: number): string => {
@@ -81,11 +81,12 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
         console.log('Trust rating columns may not exist yet:', err);
       }
       
+      
       try {
         await supabase.from('mood_assessments').select('attitude_rating').limit(1);
         Object.assign(moodData, {
           attitude_rating: attitudeRating,
-          attitude_label: getAttitudeLabel(attitudeRating)
+          attitude_label: getAttitudeLabel(Math.round((attitudeRating / 100) * 7))
         });
       } catch (err) {
         console.log('Attitude rating columns may not exist yet:', err);
@@ -114,6 +115,12 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAttitudeChange = (stars: number) => {
+    // Convert stars to percentage for database consistency
+    const percentage = Math.round((stars / 7) * 100);
+    setAttitudeRating(percentage);
   };
 
   return (
@@ -175,20 +182,18 @@ const MoodSlider: React.FC<MoodSliderProps> = ({
             <p className="text-lg font-medium">All things considered, I think using AI Therapy for emotional well-being is:</p>
           </div>
           <div className="space-y-4">
-            <Slider
-              value={[attitudeRating]}
-              min={0}
-              max={100}
-              step={1}
-              onValueChange={(values) => setAttitudeRating(values[0])}
-              className="my-4"
+            <StarRating 
+              value={Math.round((attitudeRating / 100) * 7)}
+              onChange={handleAttitudeChange}
             />
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Harmful</span>
               <span>Beneficial</span>
             </div>
             <div className="text-center mt-2">
-              <p className="text-lg font-medium">{getAttitudeLabel(attitudeRating)}</p>
+              <p className="text-lg font-medium">
+                {getAttitudeLabel(Math.round((attitudeRating / 100) * 7))}
+              </p>
             </div>
           </div>
         </div>
